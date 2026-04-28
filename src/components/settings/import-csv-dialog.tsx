@@ -1,0 +1,76 @@
+"use client";
+
+import { useState } from "react";
+import Papa from "papaparse";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+
+export function ImportCsvDialog() {
+  const [open, setOpen] = useState(false);
+  const [csv, setCsv] = useState("");
+  const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
+
+  const parsePreview = () => {
+    const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
+    if (parsed.errors.length) {
+      toast.error(parsed.errors[0].message);
+      return;
+    }
+    setPreviewRows(parsed.data.slice(0, 5));
+  };
+
+  const importCsv = async () => {
+    const response = await fetch("/api/import/csv", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csv }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      toast.error(error?.error || "CSV import failed");
+      return;
+    }
+    const result = (await response.json()) as { imported: number; skipped: number };
+    toast.success(`Imported ${result.imported}, skipped ${result.skipped}`);
+    setOpen(false);
+    setCsv("");
+    setPreviewRows([]);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger>
+        <Button variant="outline">Import CSV</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Import applications from CSV</DialogTitle>
+          <DialogDescription>Paste CSV content, preview, then import valid rows.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Textarea rows={10} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="companyName,roleTitle,location,..." />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={parsePreview}>Preview</Button>
+            <Button onClick={importCsv}>Import</Button>
+          </div>
+          {previewRows.length > 0 ? (
+            <div className="rounded-md border p-2 text-xs">
+              {previewRows.map((row, idx) => (
+                <pre key={idx} className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(row, null, 2)}</pre>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
