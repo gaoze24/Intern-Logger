@@ -1,4 +1,4 @@
-import { ActivityEntityType, Prisma } from "@prisma/client";
+import { ActivityEntityType, Prisma, TimelineEventType } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   contactSchema,
@@ -58,6 +58,8 @@ function normalizePagination(options: PaginationOptions = {}) {
 
 export async function createInterview(userId: string, input: unknown) {
   const parsed = interviewSchema.parse(input);
+  const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
+  if (!app) throw new Error("Application not found");
   const interview = await db.interview.create({ data: { ...parsed, userId } });
   await createTimelineEvent({
     userId,
@@ -91,6 +93,12 @@ export async function updateInterview(userId: string, id: string, input: unknown
     oldValue: interview,
     newValue: updated,
   });
+  await createTimelineEvent({
+    userId,
+    applicationId: interview.applicationId,
+    type: TimelineEventType.INTERVIEW_SCHEDULED,
+    title: `Interview updated: ${updated.title}`,
+  });
   return updated;
 }
 
@@ -106,7 +114,63 @@ export async function deleteInterview(userId: string, id: string) {
     action: "deleted",
     oldValue: interview,
   });
-  return { id };
+  await createTimelineEvent({
+    userId,
+    applicationId: interview.applicationId,
+    type: TimelineEventType.INTERVIEW_SCHEDULED,
+    title: `Interview deleted: ${interview.title}`,
+  });
+  return { id, applicationId: interview.applicationId };
+}
+
+export async function markInterviewComplete(userId: string, id: string) {
+  const interview = await db.interview.findFirst({ where: { id, userId } });
+  if (!interview) throw new Error("Interview not found");
+  const updated = await db.interview.update({
+    where: { id },
+    data: { outcome: "PASSED", reflection: interview.reflection ?? "" },
+  });
+  await createTimelineEvent({
+    userId,
+    applicationId: interview.applicationId,
+    type: TimelineEventType.INTERVIEW_COMPLETED,
+    title: `Interview completed: ${interview.title}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId: interview.applicationId,
+    entityType: ActivityEntityType.INTERVIEW,
+    entityId: id,
+    action: "completed",
+    oldValue: interview.outcome,
+    newValue: updated.outcome,
+  });
+  return updated;
+}
+
+export async function markThankYouSent(userId: string, id: string) {
+  const interview = await db.interview.findFirst({ where: { id, userId } });
+  if (!interview) throw new Error("Interview not found");
+  const updated = await db.interview.update({
+    where: { id },
+    data: { thankYouSent: true },
+  });
+  await createTimelineEvent({
+    userId,
+    applicationId: interview.applicationId,
+    type: TimelineEventType.FOLLOW_UP_SENT,
+    title: `Thank-you sent: ${interview.title}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId: interview.applicationId,
+    entityType: ActivityEntityType.INTERVIEW,
+    entityId: id,
+    action: "thank_you_sent",
+    oldValue: interview.thankYouSent,
+    newValue: true,
+  });
+  return updated;
 }
 
 export async function getInterviews(userId: string) {
@@ -121,7 +185,19 @@ export async function getInterviews(userId: string) {
 
 export async function createTask(userId: string, input: unknown) {
   const parsed = taskSchema.parse(input);
+  if (parsed.applicationId) {
+    const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
+    if (!app) throw new Error("Application not found");
+  }
   const task = await db.task.create({ data: { ...parsed, userId } });
+  if (parsed.applicationId) {
+    await createTimelineEvent({
+      userId,
+      applicationId: parsed.applicationId,
+      type: TimelineEventType.NOTE_ADDED,
+      title: `Task added: ${task.title}`,
+    });
+  }
   await createActivityLog({
     userId,
     applicationId: parsed.applicationId ?? undefined,
@@ -169,6 +245,14 @@ export async function completeTask(userId: string, id: string) {
     oldValue: task.completed,
     newValue: true,
   });
+  if (task.applicationId) {
+    await createTimelineEvent({
+      userId,
+      applicationId: task.applicationId,
+      type: TimelineEventType.NOTE_ADDED,
+      title: `Task completed: ${task.title}`,
+    });
+  }
   return updated;
 }
 
@@ -176,7 +260,23 @@ export async function deleteTask(userId: string, id: string) {
   const task = await db.task.findFirst({ where: { id, userId } });
   if (!task) throw new Error("Task not found");
   await db.task.delete({ where: { id } });
-  return { id };
+  if (task.applicationId) {
+    await createTimelineEvent({
+      userId,
+      applicationId: task.applicationId,
+      type: TimelineEventType.NOTE_ADDED,
+      title: `Task deleted: ${task.title}`,
+    });
+  }
+  await createActivityLog({
+    userId,
+    applicationId: task.applicationId ?? undefined,
+    entityType: ActivityEntityType.TASK,
+    entityId: id,
+    action: "deleted",
+    oldValue: task,
+  });
+  return { id, applicationId: task.applicationId };
 }
 
 export async function getTasks(userId: string, options: PaginationOptions = {}): Promise<PaginatedResult<TaskListItem>> {
@@ -231,10 +331,21 @@ export async function createContact(userId: string, input: unknown) {
 
 export async function updateContact(userId: string, id: string, input: unknown) {
   const parsed = contactSchema.partial().parse(input);
-  return db.contact.updateMany({
-    where: { id, userId },
+  const contact = await db.contact.findFirst({ where: { id, userId } });
+  if (!contact) throw new Error("Contact not found");
+  const updated = await db.contact.update({
+    where: { id },
     data: parsed,
   });
+  await createActivityLog({
+    userId,
+    entityType: ActivityEntityType.CONTACT,
+    entityId: id,
+    action: "updated",
+    oldValue: contact,
+    newValue: updated,
+  });
+  return updated;
 }
 
 export async function deleteContact(userId: string, id: string) {
@@ -251,11 +362,52 @@ export async function linkContactToApplication(
   const app = await db.application.findFirst({ where: { id: applicationId, userId } });
   const contact = await db.contact.findFirst({ where: { id: contactId, userId } });
   if (!app || !contact) throw new Error("Not found");
-  return db.applicationContact.upsert({
+  const link = await db.applicationContact.upsert({
     where: { applicationId_contactId: { applicationId, contactId } },
     update: { relationshipToApplication },
     create: { applicationId, contactId, relationshipToApplication },
   });
+  await createTimelineEvent({
+    userId,
+    applicationId,
+    type: TimelineEventType.NOTE_ADDED,
+    title: `Contact linked: ${contact.name}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId,
+    entityType: ActivityEntityType.CONTACT,
+    entityId: contactId,
+    action: "linked",
+    newValue: link,
+  });
+  return link;
+}
+
+export async function unlinkContactFromApplication(userId: string, applicationId: string, contactId: string) {
+  const link = await db.applicationContact.findFirst({
+    where: { applicationId, contactId, application: { userId }, contact: { userId } },
+    include: { contact: true },
+  });
+  if (!link) throw new Error("Linked contact not found");
+  await db.applicationContact.delete({
+    where: { applicationId_contactId: { applicationId, contactId } },
+  });
+  await createTimelineEvent({
+    userId,
+    applicationId,
+    type: TimelineEventType.NOTE_ADDED,
+    title: `Contact unlinked: ${link.contact.name}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId,
+    entityType: ActivityEntityType.CONTACT,
+    entityId: contactId,
+    action: "unlinked",
+    oldValue: link,
+  });
+  return { applicationId, contactId };
 }
 
 export async function createDocument(userId: string, input: unknown) {
@@ -265,10 +417,21 @@ export async function createDocument(userId: string, input: unknown) {
 
 export async function updateDocument(userId: string, id: string, input: unknown) {
   const parsed = documentSchema.partial().parse(input);
-  return db.document.updateMany({
-    where: { id, userId },
+  const document = await db.document.findFirst({ where: { id, userId } });
+  if (!document) throw new Error("Document not found");
+  const updated = await db.document.update({
+    where: { id },
     data: parsed,
   });
+  await createActivityLog({
+    userId,
+    entityType: ActivityEntityType.DOCUMENT,
+    entityId: id,
+    action: "updated",
+    oldValue: document,
+    newValue: updated,
+  });
+  return updated;
 }
 
 export async function deleteDocument(userId: string, id: string) {
@@ -305,11 +468,52 @@ export async function linkDocumentToApplication(
   const app = await db.application.findFirst({ where: { id: applicationId, userId } });
   const document = await db.document.findFirst({ where: { id: documentId, userId } });
   if (!app || !document) throw new Error("Not found");
-  return db.applicationDocument.upsert({
+  const link = await db.applicationDocument.upsert({
     where: { applicationId_documentId: { applicationId, documentId } },
     update: { usageType, notes },
     create: { applicationId, documentId, usageType, notes },
   });
+  await createTimelineEvent({
+    userId,
+    applicationId,
+    type: TimelineEventType.NOTE_ADDED,
+    title: `Document linked: ${document.name}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId,
+    entityType: ActivityEntityType.DOCUMENT,
+    entityId: documentId,
+    action: "linked",
+    newValue: link,
+  });
+  return link;
+}
+
+export async function unlinkDocumentFromApplication(userId: string, applicationId: string, documentId: string) {
+  const link = await db.applicationDocument.findFirst({
+    where: { applicationId, documentId, application: { userId }, document: { userId } },
+    include: { document: true },
+  });
+  if (!link) throw new Error("Linked document not found");
+  await db.applicationDocument.delete({
+    where: { applicationId_documentId: { applicationId, documentId } },
+  });
+  await createTimelineEvent({
+    userId,
+    applicationId,
+    type: TimelineEventType.NOTE_ADDED,
+    title: `Document unlinked: ${link.document.name}`,
+  });
+  await createActivityLog({
+    userId,
+    applicationId,
+    entityType: ActivityEntityType.DOCUMENT,
+    entityId: documentId,
+    action: "unlinked",
+    oldValue: link,
+  });
+  return { applicationId, documentId };
 }
 
 export async function createTimelineEventEntry(userId: string, input: unknown) {

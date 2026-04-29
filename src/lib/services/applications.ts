@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { applicationSchema } from "@/lib/validations/application";
 import { detectDuplicates } from "@/lib/utils/duplicate";
 import { createActivityLog, createTimelineEvent } from "@/lib/services/activity";
+import { STATUS_LABELS } from "@/constants/app";
 
 const applicationInclude = {
   interviews: true,
@@ -58,6 +59,7 @@ const applicationListSelect = {
 } satisfies Prisma.ApplicationSelect;
 
 export type ApplicationListItem = Prisma.ApplicationGetPayload<{ select: typeof applicationListSelect }>;
+export type ApplicationDetail = Prisma.ApplicationGetPayload<{ include: typeof applicationInclude }>;
 export type KanbanApplicationItem = Prisma.ApplicationGetPayload<{
   select: {
     id: true;
@@ -279,6 +281,12 @@ export async function updateApplication(userId: string, id: string, input: unkno
     oldValue: existing,
     newValue: updated,
   });
+  await createTimelineEvent({
+    userId,
+    applicationId: id,
+    type: TimelineEventType.NOTE_ADDED,
+    title: "Application updated",
+  });
 
   return updated;
 }
@@ -333,7 +341,7 @@ export async function changeApplicationStatus(
     userId,
     applicationId: id,
     type: TimelineEventType.STATUS_CHANGED,
-    title: `Status changed: ${app.status} → ${status}`,
+    title: `Status changed: ${STATUS_LABELS[app.status]} to ${STATUS_LABELS[status]}`,
     description: note,
   });
   await createActivityLog({

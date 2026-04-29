@@ -107,7 +107,8 @@ export async function getDashboardStats(userId: string) {
     rejections,
     interviewsUpcoming,
     deadlinesThisWeek,
-    followUpsDue,
+    reminderFollowUpsDue,
+    contactFollowUpsDue,
     statusGroups,
     monthly,
   ] = await Promise.all([
@@ -123,6 +124,12 @@ export async function getDashboardStats(userId: string) {
         completed: false,
         type: ReminderType.FOLLOW_UP,
         remindAt: { lte: weekEnd },
+      },
+    }),
+    db.contact.count({
+      where: {
+        userId,
+        followUpDate: { lte: weekEnd },
       },
     }),
     db.application.groupBy({
@@ -144,7 +151,7 @@ export async function getDashboardStats(userId: string) {
     offers,
     rejections,
     deadlinesThisWeek,
-    followUpsDue,
+    followUpsDue: reminderFollowUpsDue + contactFollowUpsDue,
     statusCounts,
     monthly,
     conversion,

@@ -293,6 +293,7 @@ model Interview {
   @@index([applicationId])
   @@index([scheduledAt])
   @@index([userId, scheduledAt])
+  @@index([userId, applicationId, scheduledAt])
 }
 
 model Task {
@@ -318,6 +319,8 @@ model Task {
   @@index([userId, dueDate])
   @@index([userId, completed])
   @@index([userId, completed, dueDate])
+  @@index([userId, applicationId, dueDate])
+  @@index([userId, applicationId, completed])
 }
 
 model Contact {
@@ -341,6 +344,7 @@ model Contact {
   @@index([userId])
   @@index([company])
   @@index([followUpDate])
+  @@index([userId, company])
   @@index([userId, followUpDate])
 }
 
@@ -369,6 +373,7 @@ model Document {
   applications  ApplicationDocument[]
 
   @@index([userId])
+  @@index([userId, type])
   @@index([updatedAt])
   @@index([userId, updatedAt])
 }
@@ -398,6 +403,7 @@ model TimelineEvent {
   application   Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt])
+  @@index([userId, applicationId, occurredAt])
 }
 
 model ActivityLog {
@@ -414,6 +420,7 @@ model ActivityLog {
   application   Application?       @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  @@index([userId, applicationId, createdAt])
 }
 
 model Reminder {

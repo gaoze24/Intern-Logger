@@ -1,10 +1,13 @@
 import type {
   ApplicationStatusType,
   DocumentType,
+  InterviewOutcome,
   InterviewType,
   Priority,
   RelationshipType,
   Source,
+  TaskPriority,
+  TimelineEventType,
   WorkMode,
 } from "@prisma/client";
 
@@ -82,6 +85,17 @@ export const PRIORITY_OPTIONS: { value: Priority; label: string }[] = (
   ["LOW", "MEDIUM", "HIGH", "DREAM"] as Priority[]
 ).map((value) => ({ value, label: PRIORITY_LABELS[value] }));
 
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  URGENT: "Urgent",
+};
+
+export const TASK_PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = (
+  ["LOW", "MEDIUM", "HIGH", "URGENT"] as TaskPriority[]
+).map((value) => ({ value, label: TASK_PRIORITY_LABELS[value] }));
+
 export const WORK_MODES: WorkMode[] = ["ONSITE", "HYBRID", "REMOTE", "UNKNOWN"];
 
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
@@ -125,16 +139,42 @@ export const APPLICATION_SOURCE_OPTIONS: { value: Source; label: string }[] = SO
 
 export const INTERVIEW_TYPE_LABELS: Record<InterviewType, string> = {
   OA: "Online Assessment",
-  PHONE_SCREEN: "Phone Screen",
+  PHONE_SCREEN: "Recruiter Screen",
   HR_INTERVIEW: "HR Interview",
   TECHNICAL_INTERVIEW: "Technical Interview",
   BEHAVIORAL_INTERVIEW: "Behavioral Interview",
   CASE_INTERVIEW: "Case Interview",
   FINAL_ROUND: "Final Round",
-  TAKE_HOME: "Take-home",
+  TAKE_HOME: "Take-home Assignment",
   GROUP_INTERVIEW: "Group Interview",
   OTHER: "Other",
 };
+
+export const INTERVIEW_TYPE_OPTIONS: { value: InterviewType; label: string }[] = (
+  [
+    "OA",
+    "PHONE_SCREEN",
+    "TECHNICAL_INTERVIEW",
+    "BEHAVIORAL_INTERVIEW",
+    "CASE_INTERVIEW",
+    "FINAL_ROUND",
+    "TAKE_HOME",
+    "GROUP_INTERVIEW",
+    "OTHER",
+  ] as InterviewType[]
+).map((value) => ({ value, label: INTERVIEW_TYPE_LABELS[value] }));
+
+export const INTERVIEW_OUTCOME_LABELS: Record<InterviewOutcome, string> = {
+  PENDING: "Scheduled",
+  PASSED: "Passed",
+  FAILED: "Failed",
+  NO_SHOW: "No-show",
+  CANCELED: "Cancelled",
+};
+
+export const INTERVIEW_OUTCOME_OPTIONS: { value: InterviewOutcome; label: string }[] = (
+  ["PENDING", "PASSED", "FAILED", "NO_SHOW", "CANCELED"] as InterviewOutcome[]
+).map((value) => ({ value, label: INTERVIEW_OUTCOME_LABELS[value] }));
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   RESUME: "Resume",
@@ -142,14 +182,27 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   TRANSCRIPT: "Transcript",
   PORTFOLIO: "Portfolio",
   GITHUB: "GitHub",
-  WEBSITE: "Website",
+  WEBSITE: "Personal Website",
   WRITING_SAMPLE: "Writing Sample",
   OTHER: "Other",
 };
 
+export const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = (
+  [
+    "RESUME",
+    "COVER_LETTER",
+    "TRANSCRIPT",
+    "PORTFOLIO",
+    "GITHUB",
+    "WEBSITE",
+    "WRITING_SAMPLE",
+    "OTHER",
+  ] as DocumentType[]
+).map((value) => ({ value, label: DOCUMENT_TYPE_LABELS[value] }));
+
 export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   RECRUITER: "Recruiter",
-  ALUMNI: "Alumni Contact",
+  ALUMNI: "Alumni",
   REFERRAL: "Referral",
   INTERVIEWER: "Interviewer",
   HIRING_MANAGER: "Hiring Manager",
@@ -157,3 +210,52 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   FRIEND: "Friend",
   OTHER: "Other",
 };
+
+export const RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; label: string }[] = (
+  [
+    "RECRUITER",
+    "HIRING_MANAGER",
+    "INTERVIEWER",
+    "REFERRAL",
+    "ALUMNI",
+    "EMPLOYEE",
+    "FRIEND",
+    "OTHER",
+  ] as RelationshipType[]
+).map((value) => ({ value, label: RELATIONSHIP_TYPE_LABELS[value] }));
+
+export const TIMELINE_EVENT_TYPE_LABELS: Record<TimelineEventType, string> = {
+  DISCOVERED: "Discovered",
+  PREPARATION_STARTED: "Preparation Started",
+  APPLIED: "Applied",
+  OA_RECEIVED: "OA Received",
+  OA_SUBMITTED: "OA Submitted",
+  INTERVIEW_SCHEDULED: "Interview Scheduled",
+  INTERVIEW_COMPLETED: "Interview Completed",
+  OFFER_RECEIVED: "Offer Received",
+  REJECTED: "Rejected",
+  WITHDRAWN: "Withdrawn",
+  FOLLOW_UP_SENT: "Follow-up Sent",
+  STATUS_CHANGED: "Status Changed",
+  NOTE_ADDED: "Note Added",
+};
+
+export const TIMELINE_EVENT_TYPE_OPTIONS: { value: TimelineEventType; label: string }[] = (
+  [
+    "NOTE_ADDED",
+    "FOLLOW_UP_SENT",
+    "OA_SUBMITTED",
+    "INTERVIEW_COMPLETED",
+    "STATUS_CHANGED",
+    "APPLIED",
+  ] as TimelineEventType[]
+).map((value) => ({ value, label: TIMELINE_EVENT_TYPE_LABELS[value] }));
+
+export const DOCUMENT_USAGE_OPTIONS = [
+  "Submitted Resume",
+  "Submitted Cover Letter",
+  "Supporting Document",
+  "Portfolio Link",
+  "Reference",
+  "Other",
+] as const;

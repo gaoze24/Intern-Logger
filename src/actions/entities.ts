@@ -14,6 +14,10 @@ import {
   deleteTask,
   linkContactToApplication,
   linkDocumentToApplication,
+  markInterviewComplete,
+  markThankYouSent,
+  unlinkContactFromApplication,
+  unlinkDocumentFromApplication,
   updateContact,
   updateDocument,
   updateInterview,
@@ -27,6 +31,7 @@ export async function createInterviewAction(input: unknown) {
   revalidatePath("/applications");
   revalidatePath(`/applications/${result.applicationId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return result;
 }
 
@@ -34,7 +39,9 @@ export async function updateInterviewAction(id: string, input: unknown) {
   const userId = await requireUserId();
   const result = await updateInterview(userId, id, input);
   revalidatePath("/applications");
+  revalidatePath(`/applications/${result.applicationId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return result;
 }
 
@@ -42,7 +49,25 @@ export async function deleteInterviewAction(id: string) {
   const userId = await requireUserId();
   const result = await deleteInterview(userId, id);
   revalidatePath("/applications");
+  revalidatePath(`/applications/${result.applicationId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  return result;
+}
+
+export async function markInterviewCompleteAction(id: string) {
+  const userId = await requireUserId();
+  const result = await markInterviewComplete(userId, id);
+  revalidatePath(`/applications/${result.applicationId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  return result;
+}
+
+export async function markThankYouSentAction(id: string) {
+  const userId = await requireUserId();
+  const result = await markThankYouSent(userId, id);
+  revalidatePath(`/applications/${result.applicationId}`);
   return result;
 }
 
@@ -78,6 +103,7 @@ export async function deleteTaskAction(id: string) {
   const result = await deleteTask(userId, id);
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  if (result.applicationId) revalidatePath(`/applications/${result.applicationId}`);
   return result;
 }
 
@@ -85,6 +111,7 @@ export async function createContactAction(input: unknown) {
   const userId = await requireUserId();
   const result = await createContact(userId, input);
   revalidatePath("/contacts");
+  revalidatePath("/dashboard");
   return result;
 }
 
@@ -92,6 +119,7 @@ export async function updateContactAction(id: string, input: unknown) {
   const userId = await requireUserId();
   const result = await updateContact(userId, id, input);
   revalidatePath("/contacts");
+  revalidatePath("/dashboard");
   return result;
 }
 
@@ -99,6 +127,8 @@ export async function deleteContactAction(id: string) {
   const userId = await requireUserId();
   const result = await deleteContact(userId, id);
   revalidatePath("/contacts");
+  revalidatePath("/applications");
+  revalidatePath("/dashboard");
   return result;
 }
 
@@ -110,6 +140,17 @@ export async function linkContactToApplicationAction(
   const userId = await requireUserId();
   const result = await linkContactToApplication(userId, applicationId, contactId, relationshipToApplication);
   revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/contacts");
+  revalidatePath("/dashboard");
+  return result;
+}
+
+export async function unlinkContactFromApplicationAction(applicationId: string, contactId: string) {
+  const userId = await requireUserId();
+  const result = await unlinkContactFromApplication(userId, applicationId, contactId);
+  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/contacts");
+  revalidatePath("/dashboard");
   return result;
 }
 
@@ -131,6 +172,7 @@ export async function deleteDocumentAction(id: string) {
   const userId = await requireUserId();
   const result = await deleteDocument(userId, id);
   revalidatePath("/documents");
+  revalidatePath("/applications");
   return result;
 }
 
@@ -143,6 +185,15 @@ export async function linkDocumentToApplicationAction(
   const userId = await requireUserId();
   const result = await linkDocumentToApplication(userId, applicationId, documentId, usageType, notes);
   revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/documents");
+  return result;
+}
+
+export async function unlinkDocumentFromApplicationAction(applicationId: string, documentId: string) {
+  const userId = await requireUserId();
+  const result = await unlinkDocumentFromApplication(userId, applicationId, documentId);
+  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/documents");
   return result;
 }
 
