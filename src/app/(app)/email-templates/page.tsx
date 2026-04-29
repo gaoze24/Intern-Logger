@@ -55,7 +55,7 @@ export default function EmailTemplatesPage() {
           <div className="space-y-2">
             <Label>Template</Label>
             <Select value={type} onValueChange={(value) => setType(value as TemplateType)}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

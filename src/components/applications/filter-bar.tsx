@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ApplicationStatusType } from "@prisma/client";
 import { SearchParamInput } from "@/components/common/search-param-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { APPLICATION_STATUS_OPTIONS } from "@/constants/app";
 
 export function ApplicationsFilterBar() {
   const params = useSearchParams();
@@ -14,7 +14,7 @@ export function ApplicationsFilterBar() {
   const statusValue = params.get("status") ?? "ALL";
   const viewValue = params.get("view") ?? "table";
 
-  const statuses = useMemo(() => Object.values(ApplicationStatusType), []);
+  const statuses = useMemo(() => APPLICATION_STATUS_OPTIONS, []);
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
@@ -34,9 +34,9 @@ export function ApplicationsFilterBar() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All statuses</SelectItem>
-          {statuses.map((status) => (
-            <SelectItem key={status} value={status}>
-              {status.replaceAll("_", " ")}
+          {statuses.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>

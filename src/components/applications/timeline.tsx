@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/utils/date";
+import { formatEnumLabel } from "@/constants/app";
 
 type TimelineItem = {
   id: string;
@@ -17,7 +18,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
             <p className="text-[15px] font-medium">{item.title}</p>
             <span className="text-sm text-muted-foreground">{formatDate(item.occurredAt)}</span>
           </div>
-          <p className="text-sm text-muted-foreground">{item.type.replaceAll("_", " ")}</p>
+          <p className="text-sm text-muted-foreground">{formatEnumLabel(item.type)}</p>
           {item.description ? <p className="mt-1 text-[15px]">{item.description}</p> : null}
         </div>
       ))}

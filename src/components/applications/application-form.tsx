@@ -12,7 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SOURCES, WORK_MODES } from "@/constants/app";
+import {
+  APPLICATION_SOURCE_OPTIONS,
+  APPLICATION_STATUS_OPTIONS,
+  PRIORITY_OPTIONS,
+  WORK_MODE_OPTIONS,
+} from "@/constants/app";
 import { ApplicationStatusType, Priority } from "@prisma/client";
 import { z } from "zod";
 
@@ -80,13 +85,13 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
             name="status"
             render={({ field }) => (
               <Select value={field.value} onValueChange={(value) => field.onChange(value as ApplicationStatusType)}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ApplicationStatusType).map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status.replaceAll("_", " ")}
+                  {APPLICATION_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -101,13 +106,13 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
             name="priority"
             render={({ field }) => (
               <Select value={field.value} onValueChange={(value) => field.onChange(value as Priority)}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(Priority).map((priority) => (
-                    <SelectItem key={priority} value={priority}>
-                      {priority}
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -122,13 +127,13 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
             name="workMode"
             render={({ field }) => (
               <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["workMode"])}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WORK_MODES.map((mode) => (
-                    <SelectItem key={mode} value={mode}>
-                      {mode}
+                  {WORK_MODE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -156,13 +161,13 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
           name="source"
           render={({ field }) => (
             <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["source"])}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SOURCES.map((source) => (
-                  <SelectItem key={source} value={source}>
-                    {source.replaceAll("_", " ")}
+                {APPLICATION_SOURCE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -1,5 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RELATIONSHIP_TYPE_LABELS } from "@/constants/app";
 import { formatDate } from "@/lib/utils/date";
+import type { RelationshipType } from "@prisma/client";
 
 type ContactItem = {
   id: string;
@@ -8,7 +10,7 @@ type ContactItem = {
   role: string | null;
   email: string | null;
   linkedinUrl: string | null;
-  relationshipType: string;
+  relationshipType: RelationshipType;
   followUpDate: Date | null;
   applications: {
     application: {
@@ -26,7 +28,7 @@ export function ContactList({ contacts }: { contacts: ContactItem[] }) {
         <Card key={contact.id} className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle>{contact.name}</CardTitle>
-            <CardDescription className="text-[15px]">{contact.relationshipType}</CardDescription>
+            <CardDescription className="text-[15px]">{RELATIONSHIP_TYPE_LABELS[contact.relationshipType]}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-[15px]">
             <p>{contact.company ?? "—"} {contact.role ? `· ${contact.role}` : ""}</p>

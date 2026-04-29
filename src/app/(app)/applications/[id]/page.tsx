@@ -15,6 +15,7 @@ import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
 import { getApplicationById } from "@/lib/services/applications";
 import { formatDate } from "@/lib/utils/date";
 import { ExportDialog } from "@/components/common/export-dialog";
+import { INTERVIEW_TYPE_LABELS, SOURCE_LABELS, WORK_MODE_LABELS } from "@/constants/app";
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserIdOrRedirect();
@@ -40,10 +41,10 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </CardHeader>
           <CardContent className="grid gap-3 text-[15px] md:grid-cols-2">
             <p><span className="text-muted-foreground">Location:</span> {application.location ?? "—"}</p>
-            <p><span className="text-muted-foreground">Work mode:</span> {application.workMode}</p>
+            <p><span className="text-muted-foreground">Work mode:</span> {WORK_MODE_LABELS[application.workMode]}</p>
             <p><span className="text-muted-foreground">Season:</span> {application.season ?? "—"}</p>
             <p><span className="text-muted-foreground">Applied date:</span> {formatDate(application.appliedDate)}</p>
-            <p className="md:col-span-2"><span className="text-muted-foreground">Source:</span> {application.source}</p>
+            <p className="md:col-span-2"><span className="text-muted-foreground">Source:</span> {SOURCE_LABELS[application.source]}</p>
           </CardContent>
         </Card>
 
@@ -119,7 +120,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                     <CardTitle>{interview.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-[15px] text-muted-foreground">
-                    <p>{interview.type.replaceAll("_", " ")}</p>
+                    <p>{INTERVIEW_TYPE_LABELS[interview.type]}</p>
                     <p>{formatDate(interview.scheduledAt)}</p>
                     <p>{interview.interviewerName ?? "No interviewer specified"}</p>
                   </CardContent>
