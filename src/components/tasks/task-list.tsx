@@ -29,8 +29,12 @@ export function TaskList({ tasks }: { tasks: TaskItem[] }) {
                   checked={task.completed}
                   onCheckedChange={async () => {
                     if (!task.completed) {
-                      await completeTaskAction(task.id);
-                      toast.success("Task completed");
+                      const result = await completeTaskAction(task.id);
+                      if (!result.ok) {
+                        toast.error(result.message);
+                        return;
+                      }
+                      toast.success(result.message ?? "Task completed");
                     }
                   }}
                 />

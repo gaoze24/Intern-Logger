@@ -20,9 +20,14 @@ import {
 } from "@/constants/app";
 import { ApplicationStatusType, Priority } from "@prisma/client";
 import { z } from "zod";
+import type { FieldErrors } from "@/lib/errors";
 
 type FormValues = z.input<typeof applicationSchema>;
 type FormOutput = z.output<typeof applicationSchema>;
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-sm text-destructive">{message}</p> : null;
+}
 
 export function ApplicationForm({ initialValues, id }: { initialValues?: Partial<FormValues>; id?: string }) {
   const router = useRouter();
@@ -43,23 +48,42 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
     },
   });
 
+  const applyServerFieldErrors = (fieldErrors?: FieldErrors) => {
+    Object.entries(fieldErrors ?? {}).forEach(([field, messages]) => {
+      const message = messages[0];
+      if (message) {
+        form.setError(field as keyof FormValues, { type: "server", message });
+      }
+    });
+  };
+
   const onSubmit = (values: FormOutput) => {
     startTransition(async () => {
-      try {
-        if (id) {
-          await updateApplicationAction(id, values);
-          toast.success("Application updated");
-          router.refresh();
+      if (id) {
+        const result = await updateApplicationAction(id, values);
+        if (!result.ok) {
+          applyServerFieldErrors(result.fieldErrors);
+          toast.error(result.message);
           return;
         }
-        const result = await createApplicationAction(values);
-        toast.success("Application created");
-        if (result.duplicates.length > 0) {
-          toast.warning(`Potential duplicates found: ${result.duplicates.length}`);
-        }
-        router.push(`/applications/${result.created.id}`);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to save");
+        toast.success(result.message ?? "Application updated");
+        router.refresh();
+        return;
+      }
+      const result = await createApplicationAction(values);
+      if (!result.ok) {
+        applyServerFieldErrors(result.fieldErrors);
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message ?? "Application created");
+      if (result.data?.duplicates.length) {
+        toast.warning(`Potential duplicates found: ${result.data.duplicates.length}`);
+      }
+      if (result.data?.created.id) {
+        router.push(`/applications/${result.data.created.id}`);
+      } else {
+        router.push("/applications");
       }
     });
   };
@@ -69,11 +93,13 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="companyName">Company</Label>
-          <Input id="companyName" {...form.register("companyName")} />
+          <Input id="companyName" aria-invalid={Boolean(form.formState.errors.companyName)} {...form.register("companyName")} />
+          <FieldError message={form.formState.errors.companyName?.message} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="roleTitle">Role title</Label>
-          <Input id="roleTitle" {...form.register("roleTitle")} />
+          <Input id="roleTitle" aria-invalid={Boolean(form.formState.errors.roleTitle)} {...form.register("roleTitle")} />
+          <FieldError message={form.formState.errors.roleTitle?.message} />
         </div>
       </div>
 
@@ -98,6 +124,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
               </Select>
             )}
           />
+          <FieldError message={form.formState.errors.status?.message} />
         </div>
         <div className="space-y-2">
           <Label>Priority</Label>
@@ -119,6 +146,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
               </Select>
             )}
           />
+          <FieldError message={form.formState.errors.priority?.message} />
         </div>
         <div className="space-y-2">
           <Label>Work mode</Label>
@@ -140,6 +168,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
               </Select>
             )}
           />
+          <FieldError message={form.formState.errors.workMode?.message} />
         </div>
       </div>
 
@@ -177,13 +206,25 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="applicationUrl">Application URL</Label>
-        <Input id="applicationUrl" placeholder="https://..." {...form.register("applicationUrl")} />
+          <Label htmlFor="applicationUrl">Application URL</Label>
+        <Input
+          id="applicationUrl"
+          placeholder="https://..."
+          aria-invalid={Boolean(form.formState.errors.applicationUrl)}
+          {...form.register("applicationUrl")}
+        />
+        <FieldError message={form.formState.errors.applicationUrl?.message} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="jobPostingUrl">Job posting URL</Label>
-        <Input id="jobPostingUrl" placeholder="https://..." {...form.register("jobPostingUrl")} />
+        <Input
+          id="jobPostingUrl"
+          placeholder="https://..."
+          aria-invalid={Boolean(form.formState.errors.jobPostingUrl)}
+          {...form.register("jobPostingUrl")}
+        />
+        <FieldError message={form.formState.errors.jobPostingUrl?.message} />
       </div>
 
       <div className="space-y-2">

@@ -11,56 +11,81 @@ import {
   updateApplication,
 } from "@/lib/services/applications";
 import { requireUserId } from "@/lib/auth-helpers";
+import { ok, toActionError } from "@/lib/errors";
 
 export async function createApplicationAction(input: unknown) {
-  const userId = await requireUserId();
-  const result = await createApplication(userId, input);
-  revalidatePath("/applications");
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await createApplication(userId, input);
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    return ok(result, "Application saved.");
+  } catch (error) {
+    return toActionError(error, "Could not save this application. Please try again.");
+  }
 }
 
 export async function updateApplicationAction(id: string, input: unknown) {
-  const userId = await requireUserId();
-  const result = await updateApplication(userId, id, input);
-  revalidatePath(`/applications/${id}`);
-  revalidatePath("/applications");
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await updateApplication(userId, id, input);
+    revalidatePath(`/applications/${id}`);
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    return ok(result, "Application updated.");
+  } catch (error) {
+    return toActionError(error, "Could not update this application. Please try again.");
+  }
 }
 
 export async function deleteApplicationAction(id: string) {
-  const userId = await requireUserId();
-  const result = await deleteApplication(userId, id);
-  revalidatePath("/applications");
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await deleteApplication(userId, id);
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    return ok(result, "Application deleted.");
+  } catch (error) {
+    return toActionError(error, "Could not delete this application. Please try again.", "DELETE_FAILED");
+  }
 }
 
 export async function archiveApplicationAction(id: string) {
-  const userId = await requireUserId();
-  const result = await archiveApplication(userId, id);
-  revalidatePath("/applications");
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await archiveApplication(userId, id);
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    return ok(result, "Application archived.");
+  } catch (error) {
+    return toActionError(error, "Could not archive this application. Please try again.");
+  }
 }
 
 export async function changeApplicationStatusAction(id: string, status: ApplicationStatusType, note?: string) {
-  const userId = await requireUserId();
-  const result = await changeApplicationStatus(userId, id, status, note);
-  revalidatePath("/kanban");
-  revalidatePath(`/applications/${id}`);
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await changeApplicationStatus(userId, id, status, note);
+    revalidatePath("/kanban");
+    revalidatePath(`/applications/${id}`);
+    revalidatePath("/dashboard");
+    return ok(result, "Status updated.");
+  } catch (error) {
+    return toActionError(error, "Could not update this status. Please try again.");
+  }
 }
 
 export async function bulkUpdateApplicationsAction(
   ids: string[],
   update: Partial<{ status: ApplicationStatusType; archived: boolean }>,
 ) {
-  const userId = await requireUserId();
-  const result = await bulkUpdateApplications(userId, ids, update);
-  revalidatePath("/applications");
-  revalidatePath("/dashboard");
-  return result;
+  try {
+    const userId = await requireUserId();
+    const result = await bulkUpdateApplications(userId, ids, update);
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    return ok(result, "Applications updated.");
+  } catch (error) {
+    return toActionError(error, "Could not update these applications. Please try again.");
+  }
 }

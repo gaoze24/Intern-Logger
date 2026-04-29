@@ -229,13 +229,13 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
     }
     const note = window.prompt("Optional note for status change:");
     startTransition(async () => {
-      try {
-        await changeApplicationStatusAction(id, status, note ?? undefined);
-        toast.success("Status updated");
-        router.refresh();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to update status");
+      const result = await changeApplicationStatusAction(id, status, note ?? undefined);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
       }
+      toast.success(result.message ?? "Status updated");
+      router.refresh();
     });
   };
 

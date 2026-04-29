@@ -11,6 +11,7 @@ import { applicationSchema } from "@/lib/validations/application";
 import { detectDuplicates } from "@/lib/utils/duplicate";
 import { createActivityLog, createTimelineEvent } from "@/lib/services/activity";
 import { STATUS_LABELS } from "@/constants/app";
+import { appError } from "@/lib/errors";
 
 const applicationInclude = {
   interviews: true,
@@ -234,7 +235,7 @@ export async function createApplication(userId: string, input: unknown) {
 export async function updateApplication(userId: string, id: string, input: unknown) {
   const parsed = applicationSchema.partial().parse(input);
   const existing = await db.application.findFirst({ where: { id, userId } });
-  if (!existing) throw new Error("Application not found");
+  if (!existing) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
 
   const updated = await db.application.update({
     where: { id },
@@ -295,7 +296,7 @@ export async function updateApplication(userId: string, id: string, input: unkno
 
 export async function archiveApplication(userId: string, id: string) {
   const app = await db.application.findFirst({ where: { id, userId } });
-  if (!app) throw new Error("Application not found");
+  if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   const archived = await db.application.update({
     where: { id },
     data: { archived: true, status: ApplicationStatusType.ARCHIVED },
@@ -320,7 +321,7 @@ export async function archiveApplication(userId: string, id: string) {
 
 export async function deleteApplication(userId: string, id: string) {
   const existing = await db.application.findFirst({ where: { id, userId } });
-  if (!existing) throw new Error("Application not found");
+  if (!existing) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   await db.application.delete({ where: { id } });
   return { id };
 }
@@ -332,7 +333,7 @@ export async function changeApplicationStatus(
   note?: string,
 ) {
   const app = await db.application.findFirst({ where: { id, userId } });
-  if (!app) throw new Error("Application not found");
+  if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
 
   const updated = await db.application.update({
     where: { id },

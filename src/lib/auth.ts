@@ -15,8 +15,8 @@ declare module "next-auth" {
 }
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().email(),
+  password: z.string().min(1),
 });
 
 export const authOptions: NextAuthOptions = {

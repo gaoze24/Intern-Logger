@@ -8,6 +8,7 @@ import {
   timelineEventSchema,
 } from "@/lib/validations/entities";
 import { createActivityLog, createTimelineEvent } from "@/lib/services/activity";
+import { appError } from "@/lib/errors";
 
 export type PaginatedResult<T> = {
   items: T[];
@@ -59,7 +60,7 @@ function normalizePagination(options: PaginationOptions = {}) {
 export async function createInterview(userId: string, input: unknown) {
   const parsed = interviewSchema.parse(input);
   const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
-  if (!app) throw new Error("Application not found");
+  if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   const interview = await db.interview.create({ data: { ...parsed, userId } });
   await createTimelineEvent({
     userId,
@@ -82,7 +83,7 @@ export async function createInterview(userId: string, input: unknown) {
 export async function updateInterview(userId: string, id: string, input: unknown) {
   const parsed = interviewSchema.partial().parse(input);
   const interview = await db.interview.findFirst({ where: { id, userId } });
-  if (!interview) throw new Error("Interview not found");
+  if (!interview) throw appError("NOT_FOUND", "This interview no longer exists.", { status: 404 });
   const updated = await db.interview.update({ where: { id }, data: parsed });
   await createActivityLog({
     userId,
@@ -104,7 +105,7 @@ export async function updateInterview(userId: string, id: string, input: unknown
 
 export async function deleteInterview(userId: string, id: string) {
   const interview = await db.interview.findFirst({ where: { id, userId } });
-  if (!interview) throw new Error("Interview not found");
+  if (!interview) throw appError("NOT_FOUND", "This interview no longer exists.", { status: 404 });
   await db.interview.delete({ where: { id } });
   await createActivityLog({
     userId,
@@ -125,7 +126,7 @@ export async function deleteInterview(userId: string, id: string) {
 
 export async function markInterviewComplete(userId: string, id: string) {
   const interview = await db.interview.findFirst({ where: { id, userId } });
-  if (!interview) throw new Error("Interview not found");
+  if (!interview) throw appError("NOT_FOUND", "This interview no longer exists.", { status: 404 });
   const updated = await db.interview.update({
     where: { id },
     data: { outcome: "PASSED", reflection: interview.reflection ?? "" },
@@ -150,7 +151,7 @@ export async function markInterviewComplete(userId: string, id: string) {
 
 export async function markThankYouSent(userId: string, id: string) {
   const interview = await db.interview.findFirst({ where: { id, userId } });
-  if (!interview) throw new Error("Interview not found");
+  if (!interview) throw appError("NOT_FOUND", "This interview no longer exists.", { status: 404 });
   const updated = await db.interview.update({
     where: { id },
     data: { thankYouSent: true },
@@ -187,7 +188,7 @@ export async function createTask(userId: string, input: unknown) {
   const parsed = taskSchema.parse(input);
   if (parsed.applicationId) {
     const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
-    if (!app) throw new Error("Application not found");
+    if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   }
   const task = await db.task.create({ data: { ...parsed, userId } });
   if (parsed.applicationId) {
@@ -212,7 +213,7 @@ export async function createTask(userId: string, input: unknown) {
 export async function updateTask(userId: string, id: string, input: unknown) {
   const parsed = taskSchema.partial().parse(input);
   const task = await db.task.findFirst({ where: { id, userId } });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw appError("NOT_FOUND", "This task no longer exists.", { status: 404 });
   const updated = await db.task.update({
     where: { id },
     data: parsed,
@@ -231,7 +232,7 @@ export async function updateTask(userId: string, id: string, input: unknown) {
 
 export async function completeTask(userId: string, id: string) {
   const task = await db.task.findFirst({ where: { id, userId } });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw appError("NOT_FOUND", "This task no longer exists.", { status: 404 });
   const updated = await db.task.update({
     where: { id },
     data: { completed: true, completedAt: new Date() },
@@ -258,7 +259,7 @@ export async function completeTask(userId: string, id: string) {
 
 export async function deleteTask(userId: string, id: string) {
   const task = await db.task.findFirst({ where: { id, userId } });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw appError("NOT_FOUND", "This task no longer exists.", { status: 404 });
   await db.task.delete({ where: { id } });
   if (task.applicationId) {
     await createTimelineEvent({
@@ -332,7 +333,7 @@ export async function createContact(userId: string, input: unknown) {
 export async function updateContact(userId: string, id: string, input: unknown) {
   const parsed = contactSchema.partial().parse(input);
   const contact = await db.contact.findFirst({ where: { id, userId } });
-  if (!contact) throw new Error("Contact not found");
+  if (!contact) throw appError("NOT_FOUND", "This contact no longer exists.", { status: 404 });
   const updated = await db.contact.update({
     where: { id },
     data: parsed,
@@ -361,7 +362,8 @@ export async function linkContactToApplication(
 ) {
   const app = await db.application.findFirst({ where: { id: applicationId, userId } });
   const contact = await db.contact.findFirst({ where: { id: contactId, userId } });
-  if (!app || !contact) throw new Error("Not found");
+  if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+  if (!contact) throw appError("NOT_FOUND", "The selected contact could not be linked because it no longer exists.", { status: 404 });
   const link = await db.applicationContact.upsert({
     where: { applicationId_contactId: { applicationId, contactId } },
     update: { relationshipToApplication },
@@ -389,7 +391,7 @@ export async function unlinkContactFromApplication(userId: string, applicationId
     where: { applicationId, contactId, application: { userId }, contact: { userId } },
     include: { contact: true },
   });
-  if (!link) throw new Error("Linked contact not found");
+  if (!link) throw appError("NOT_FOUND", "This contact is no longer linked to the application.", { status: 404 });
   await db.applicationContact.delete({
     where: { applicationId_contactId: { applicationId, contactId } },
   });
@@ -418,7 +420,7 @@ export async function createDocument(userId: string, input: unknown) {
 export async function updateDocument(userId: string, id: string, input: unknown) {
   const parsed = documentSchema.partial().parse(input);
   const document = await db.document.findFirst({ where: { id, userId } });
-  if (!document) throw new Error("Document not found");
+  if (!document) throw appError("NOT_FOUND", "This document no longer exists.", { status: 404 });
   const updated = await db.document.update({
     where: { id },
     data: parsed,
@@ -467,7 +469,8 @@ export async function linkDocumentToApplication(
 ) {
   const app = await db.application.findFirst({ where: { id: applicationId, userId } });
   const document = await db.document.findFirst({ where: { id: documentId, userId } });
-  if (!app || !document) throw new Error("Not found");
+  if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+  if (!document) throw appError("NOT_FOUND", "The selected document could not be linked because it no longer exists.", { status: 404 });
   const link = await db.applicationDocument.upsert({
     where: { applicationId_documentId: { applicationId, documentId } },
     update: { usageType, notes },
@@ -495,7 +498,7 @@ export async function unlinkDocumentFromApplication(userId: string, applicationI
     where: { applicationId, documentId, application: { userId }, document: { userId } },
     include: { document: true },
   });
-  if (!link) throw new Error("Linked document not found");
+  if (!link) throw appError("NOT_FOUND", "This document is no longer linked to the application.", { status: 404 });
   await db.applicationDocument.delete({
     where: { applicationId_documentId: { applicationId, documentId } },
   });

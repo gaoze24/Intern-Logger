@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createApplication, getApplicationsList } from "@/lib/services/applications";
-import { apiError, parseJsonBody } from "@/lib/http";
+import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return unauthorizedResponse();
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return unauthorizedResponse();
   try {
     const payload = await parseJsonBody(request);
     const result = await createApplication(session.user.id, payload);

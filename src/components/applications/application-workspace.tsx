@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import * as React from "react";
+import { createContext, useContext, useState, useTransition } from "react";
 import {
   CalendarClock,
   CheckSquare2,
@@ -90,6 +91,7 @@ import type {
   TaskPriority,
   TimelineEventType,
 } from "@prisma/client";
+import { isActionResult, type FieldErrors } from "@/lib/errors";
 
 type WorkspaceProps = {
   application: ApplicationDetail;
@@ -102,8 +104,17 @@ type DialogFormProps = {
   description: string;
   trigger: React.ReactNode;
   children: React.ReactNode;
-  onSubmit: (formData: FormData) => Promise<void>;
+  onSubmit: (formData: FormData) => Promise<unknown>;
 };
+
+const FormErrorContext = createContext<FieldErrors>({});
+
+function getChildFieldName(children: React.ReactNode) {
+  if (React.isValidElement<{ name?: string }>(children)) return children.props.name;
+  const childArray = React.Children.toArray(children);
+  const namedChild = childArray.find((child) => React.isValidElement<{ name?: string }>(child) && child.props.name);
+  return React.isValidElement<{ name?: string }>(namedChild) ? namedChild.props.name : undefined;
+}
 
 function optional(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
@@ -135,23 +146,44 @@ function toDateTimeInput(date: Date | null | undefined) {
 function FormDialog({ title, description, trigger, children, onSubmit }: DialogFormProps) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setFormError(null);
+          setFieldErrors({});
+        }
+      }}
+    >
       <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <form
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
+            setFormError(null);
+            setFieldErrors({});
             const formData = new FormData(event.currentTarget);
             startTransition(async () => {
               try {
-                await onSubmit(formData);
-                toast.success("Saved");
+                const result = await onSubmit(formData);
+                if (isActionResult(result) && !result.ok) {
+                  setFormError(result.message);
+                  setFieldErrors(result.fieldErrors ?? {});
+                  toast.error(result.message);
+                  return;
+                }
+                toast.success(isActionResult(result) ? (result.message ?? "Saved") : "Saved");
                 setOpen(false);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Save failed");
+              } catch {
+                const message = "Could not save your changes. Please try again.";
+                setFormError(message);
+                toast.error(message);
               }
             });
           }}
@@ -160,7 +192,8 @@ function FormDialog({ title, description, trigger, children, onSubmit }: DialogF
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          {children}
+          {formError ? <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p> : null}
+          <FormErrorContext.Provider value={fieldErrors}>{children}</FormErrorContext.Provider>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
               Cancel
@@ -176,10 +209,14 @@ function FormDialog({ title, description, trigger, children, onSubmit }: DialogF
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const fieldErrors = useContext(FormErrorContext);
+  const fieldName = getChildFieldName(children);
+  const message = fieldName ? fieldErrors[fieldName]?.[0] : undefined;
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
+      {message ? <p className="text-sm text-destructive">{message}</p> : null}
     </div>
   );
 }
@@ -271,8 +308,8 @@ function InterviewDialog({
           followUpRequired: formData.get("followUpRequired") === "on",
           thankYouSent: formData.get("thankYouSent") === "on",
         };
-        if (interview) await updateInterviewAction(interview.id, data);
-        else await createInterviewAction(data);
+        if (interview) return updateInterviewAction(interview.id, data);
+        return createInterviewAction(data);
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
@@ -367,8 +404,8 @@ function TaskDialog({
           priority: formData.get("priority") as TaskPriority,
           completed: formData.get("completed") === "on",
         };
-        if (task) await updateTaskAction(task.id, data);
-        else await createTaskAction(data);
+        if (task) return updateTaskAction(task.id, data);
+        return createTaskAction(data);
       }}
     >
       <div className="grid gap-4 md:grid-cols-2">
@@ -406,7 +443,7 @@ function ContactDialog({
 }: {
   contact?: Contact;
   trigger: React.ReactNode;
-  onSave: (data: Record<string, unknown>) => Promise<void>;
+  onSave: (data: Record<string, unknown>) => Promise<unknown>;
 }) {
   return (
     <FormDialog
@@ -414,7 +451,7 @@ function ContactDialog({
       description="Manage recruiter, referral, alumni, or interviewer details."
       trigger={trigger}
       onSubmit={async (formData) => {
-        await onSave({
+        return onSave({
           name: String(formData.get("name") || "").trim(),
           company: optional(formData.get("company")),
           role: optional(formData.get("role")),
@@ -490,7 +527,7 @@ function LinkContactDialog({
       description="Attach a saved contact to this application profile."
       trigger={<Button variant="outline" size="sm">Link Existing Contact</Button>}
       onSubmit={async (formData) => {
-        await linkContactToApplicationAction(
+        return linkContactToApplicationAction(
           applicationId,
           String(formData.get("contactId")),
           optional(formData.get("relationshipToApplication")),
@@ -520,7 +557,7 @@ function DocumentDialog({
 }: {
   document?: Document;
   trigger: React.ReactNode;
-  onSave: (data: Record<string, unknown>) => Promise<void>;
+  onSave: (data: Record<string, unknown>) => Promise<unknown>;
 }) {
   return (
     <FormDialog
@@ -528,7 +565,7 @@ function DocumentDialog({
       description="Store the URL and metadata for a resume, cover letter, portfolio, or supporting file."
       trigger={trigger}
       onSubmit={async (formData) => {
-        await onSave({
+        return onSave({
           name: String(formData.get("name") || "").trim(),
           type: formData.get("type"),
           url: String(formData.get("url") || "").trim(),
@@ -584,7 +621,7 @@ function LinkDocumentDialog({
       description="Attach a saved document to this application profile."
       trigger={<Button variant="outline" size="sm">Link Existing Document</Button>}
       onSubmit={async (formData) => {
-        await linkDocumentToApplicationAction(
+        return linkDocumentToApplicationAction(
           applicationId,
           String(formData.get("documentId")),
           optional(formData.get("usageType")),
@@ -629,7 +666,7 @@ function TimelineDialog({ applicationId }: { applicationId: string }) {
         </Button>
       }
       onSubmit={async (formData) => {
-        await createTimelineEventAction({
+        return createTimelineEventAction({
           applicationId,
           title: String(formData.get("title") || "").trim(),
           description: optional(formData.get("description")),
@@ -673,12 +710,12 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 function runMutation(action: () => Promise<unknown>, success: string) {
   return async () => {
-    try {
-      await action();
-      toast.success(success);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Action failed");
+    const result = await action();
+    if (isActionResult(result) && !result.ok) {
+      toast.error(result.message);
+      return;
     }
+    toast.success(isActionResult(result) ? (result.message ?? success) : success);
   };
 }
 
@@ -710,7 +747,9 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
       trigger={<Button variant="outline" size="sm">Create Contact</Button>}
       onSave={async (data) => {
         const contact = await createContactAction(data);
-        await linkContactToApplicationAction(application.id, contact.id, String(data.relationshipType ?? ""));
+        if (!contact.ok) return contact;
+        if (!contact.data) return { ok: false, code: "UNKNOWN_ERROR", message: "Could not create this contact. Please try again." };
+        return linkContactToApplicationAction(application.id, contact.data.id, String(data.relationshipType ?? ""));
       }}
     />
   );
@@ -720,7 +759,9 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
       trigger={<Button variant="outline" size="sm">Add Document</Button>}
       onSave={async (data) => {
         const document = await createDocumentAction(data);
-        await linkDocumentToApplicationAction(application.id, document.id, undefined, undefined);
+        if (!document.ok) return document;
+        if (!document.data) return { ok: false, code: "UNKNOWN_ERROR", message: "Could not add this document. Please try again." };
+        return linkDocumentToApplicationAction(application.id, document.data.id, undefined, undefined);
       }}
     />
   );
@@ -1120,7 +1161,7 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
                         contact={link.contact}
                         trigger={<Button variant="outline" size="sm">Edit</Button>}
                         onSave={async (data) => {
-                          await updateContactAction(link.contactId, data);
+                          return updateContactAction(link.contactId, data);
                         }}
                       />
                       <Button
@@ -1202,7 +1243,7 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
                         document={link.document}
                         trigger={<Button variant="outline" size="sm">Edit</Button>}
                         onSave={async (data) => {
-                          await updateDocumentAction(link.documentId, data);
+                          return updateDocumentAction(link.documentId, data);
                         }}
                       />
                       <Button

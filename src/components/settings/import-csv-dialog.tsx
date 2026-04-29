@@ -17,14 +17,16 @@ export function ImportCsvDialog() {
   const [open, setOpen] = useState(false);
   const [csv, setCsv] = useState("");
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   const parsePreview = async () => {
     const Papa = (await import("papaparse")).default;
     const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
     if (parsed.errors.length) {
-      toast.error(parsed.errors[0].message);
+      toast.error("Could not read this CSV file. Check the formatting and try again.");
       return;
     }
+    setImportErrors([]);
     setPreviewRows(parsed.data.slice(0, 5));
   };
 
@@ -36,14 +38,25 @@ export function ImportCsvDialog() {
     });
     if (!response.ok) {
       const error = await response.json();
-      toast.error(error?.error || "CSV import failed");
+      const message = error?.message || "Could not import this CSV file. Please try again.";
+      setImportErrors([message]);
+      toast.error(message);
       return;
     }
-    const result = (await response.json()) as { imported: number; skipped: number };
-    toast.success(`Imported ${result.imported}, skipped ${result.skipped}`);
-    setOpen(false);
-    setCsv("");
-    setPreviewRows([]);
+    const result = (await response.json()) as {
+      ok: true;
+      data: { imported: number; skipped: number; report: { status: string; reason?: string }[] };
+      message: string;
+    };
+    const rowErrors = result.data.report.flatMap((row) => (row.status === "skipped" && row.reason ? [row.reason] : []));
+    setImportErrors(rowErrors);
+    toast.success(result.message);
+    if (result.data.skipped === 0) {
+      setOpen(false);
+      setCsv("");
+      setPreviewRows([]);
+      setImportErrors([]);
+    }
   };
 
   return (
@@ -58,6 +71,14 @@ export function ImportCsvDialog() {
         </DialogHeader>
           <div className="space-y-4">
             <Textarea rows={10} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="companyName,roleTitle,location,..." />
+            {importErrors.length ? (
+              <div className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {importErrors.slice(0, 5).map((error) => (
+                  <p key={error}>{error}</p>
+                ))}
+                {importErrors.length > 5 ? <p>{importErrors.length - 5} more rows need attention.</p> : null}
+              </div>
+            ) : null}
             <div className="flex items-center gap-3">
               <Button variant="outline" onClick={parsePreview}>Preview</Button>
               <Button onClick={importCsv}>Import</Button>

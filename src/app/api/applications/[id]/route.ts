@@ -7,20 +7,25 @@ import {
   getApplicationById,
   updateApplication,
 } from "@/lib/services/applications";
-import { apiError, parseJsonBody } from "@/lib/http";
+import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return unauthorizedResponse();
   const { id } = await params;
   const data = await getApplicationById(session.user.id, id);
-  if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!data) {
+    return NextResponse.json(
+      { ok: false, code: "NOT_FOUND", message: "This application no longer exists." },
+      { status: 404 },
+    );
+  }
   return NextResponse.json({ data });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return unauthorizedResponse();
   try {
     const { id } = await params;
     const payload = await parseJsonBody(request);
@@ -37,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return unauthorizedResponse();
   try {
     const { id } = await params;
     const data = await deleteApplication(session.user.id, id);

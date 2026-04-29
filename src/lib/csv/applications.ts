@@ -36,6 +36,35 @@ export function parseApplicationsCsv(content: string) {
   };
 }
 
+function rowNumber(index: number) {
+  return index + 2;
+}
+
+function isValidOptionalUrl(value: string | undefined) {
+  if (!value) return true;
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function validateApplicationsCsvRows(rows: ImportRow[], columns: string[]) {
+  const requiredColumns = ["companyName", "roleTitle"];
+  const missingColumns = requiredColumns.filter((column) => !columns.includes(column));
+  const rowErrors = rows.flatMap((row, index) => {
+    const errors = [];
+    if (!row.companyName?.trim()) errors.push(`Row ${rowNumber(index)}: Company name is required.`);
+    if (!row.roleTitle?.trim()) errors.push(`Row ${rowNumber(index)}: Role title is required.`);
+    if (!isValidOptionalUrl(row.applicationUrl)) errors.push(`Row ${rowNumber(index)}: Application URL is not a valid URL.`);
+    if (!isValidOptionalUrl(row.jobPostingUrl)) errors.push(`Row ${rowNumber(index)}: Job posting URL is not a valid URL.`);
+    return errors;
+  });
+
+  return { missingColumns, rowErrors };
+}
+
 export function toApplicationsCsv(
   applications: Array<
     Application & {

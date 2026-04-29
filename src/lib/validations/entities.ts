@@ -10,25 +10,34 @@ import {
 } from "@prisma/client";
 
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
-const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
-const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
-const optionalEmail = z.preprocess(emptyToUndefined, z.string().email().optional());
-const optionalDate = z.preprocess(emptyToUndefined, z.coerce.date().optional().nullable());
+const optionalString = z.preprocess(emptyToUndefined, z.string().trim().optional());
+const optionalUrl = (message = "Enter a valid URL.") =>
+  z.preprocess(emptyToUndefined, z.string().trim().url(message).optional());
+const optionalEmail = (message = "Enter a valid email address.") =>
+  z.preprocess(emptyToUndefined, z.string().trim().email(message).optional());
+const optionalDate = (message = "Enter a valid date.") =>
+  z.preprocess(emptyToUndefined, z.coerce.date(message).optional().nullable());
 const optionalInt = z.preprocess(
   emptyToUndefined,
-  z.coerce.number().int().min(1).max(480).optional().nullable(),
+  z.coerce
+    .number("Enter a valid duration.")
+    .int("Enter a whole number of minutes.")
+    .min(1, "Duration must be at least 1 minute.")
+    .max(480, "Duration must be 480 minutes or fewer.")
+    .optional()
+    .nullable(),
 );
 
 export const interviewSchema = z.object({
   applicationId: z.string().min(1),
-  title: z.string().min(1),
+  title: z.string().trim().min(1, "Interview title is required."),
   type: z.nativeEnum(InterviewType),
-  scheduledAt: z.coerce.date(),
+  scheduledAt: z.coerce.date("Enter a valid interview date and time."),
   durationMinutes: optionalInt,
   location: optionalString,
-  meetingLink: optionalUrl,
+  meetingLink: optionalUrl("Enter a valid meeting link."),
   interviewerName: optionalString,
-  interviewerEmail: optionalEmail,
+  interviewerEmail: optionalEmail("Enter a valid interviewer email."),
   preparationNotes: optionalString,
   questionsAsked: optionalString,
   reflection: optionalString,
@@ -39,30 +48,30 @@ export const interviewSchema = z.object({
 
 export const taskSchema = z.object({
   applicationId: z.string().optional().nullable(),
-  title: z.string().min(1),
+  title: z.string().trim().min(1, "Task title is required."),
   description: optionalString,
-  dueDate: optionalDate,
+  dueDate: optionalDate("Enter a valid due date."),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   completed: z.boolean().default(false),
 });
 
 export const contactSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1, "Contact name is required."),
   company: optionalString,
   role: optionalString,
-  email: optionalEmail,
-  linkedinUrl: optionalUrl,
+  email: optionalEmail("Enter a valid email address."),
+  linkedinUrl: optionalUrl("Enter a valid LinkedIn URL."),
   relationshipType: z.nativeEnum(RelationshipType),
   source: z.nativeEnum(Source).optional().nullable(),
   notes: optionalString,
-  lastContactedAt: optionalDate,
-  followUpDate: optionalDate,
+  lastContactedAt: optionalDate("Enter a valid last contacted date."),
+  followUpDate: optionalDate("Enter a valid follow-up date."),
 });
 
 export const documentSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1, "Document name is required."),
   type: z.nativeEnum(DocumentType),
-  url: z.string().url(),
+  url: z.string().trim().min(1, "Document URL is required.").url("Enter a valid document URL."),
   version: optionalString,
   notes: optionalString,
   tags: z.array(z.string()).default([]),
@@ -71,8 +80,8 @@ export const documentSchema = z.object({
 export const timelineEventSchema = z.object({
   applicationId: z.string().min(1),
   type: z.nativeEnum(TimelineEventType),
-  title: z.string().min(1),
+  title: z.string().trim().min(1, "Timeline note title is required."),
   description: optionalString,
-  occurredAt: z.coerce.date(),
-  attachmentUrl: optionalUrl,
+  occurredAt: z.coerce.date("Enter a valid date and time."),
+  attachmentUrl: optionalUrl("Enter a valid attachment URL."),
 });

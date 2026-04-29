@@ -7,11 +7,14 @@ import {
   WorkMode,
 } from "@prisma/client";
 
-const optionalDate = z.coerce.date().optional().nullable();
+const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
+const optionalDate = z.preprocess(emptyToUndefined, z.coerce.date("Enter a valid date.").optional().nullable());
+const optionalUrl = (message: string) =>
+  z.preprocess(emptyToUndefined, z.string().trim().url(message).optional().or(z.literal("")));
 
 export const applicationSchema = z.object({
-  companyName: z.string().min(1, "Company is required"),
-  roleTitle: z.string().min(1, "Role is required"),
+  companyName: z.string().trim().min(1, "Company name is required.").max(120, "Company name is too long."),
+  roleTitle: z.string().trim().min(1, "Role title is required.").max(160, "Role title is too long."),
   status: z.nativeEnum(ApplicationStatusType).default(ApplicationStatusType.WISHLIST),
   department: z.string().optional(),
   location: z.string().optional(),
@@ -19,8 +22,8 @@ export const applicationSchema = z.object({
   workMode: z.nativeEnum(WorkMode).default(WorkMode.UNKNOWN),
   priority: z.nativeEnum(Priority).default(Priority.MEDIUM),
   source: z.nativeEnum(Source).default(Source.OTHER),
-  applicationUrl: z.string().url().optional().or(z.literal("")),
-  jobPostingUrl: z.string().url().optional().or(z.literal("")),
+  applicationUrl: optionalUrl("Enter a valid application URL."),
+  jobPostingUrl: optionalUrl("Enter a valid job posting URL."),
   deadline: optionalDate,
   appliedDate: optionalDate,
   discoveredDate: optionalDate,
