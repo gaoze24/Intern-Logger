@@ -21,18 +21,18 @@ type ContactItem = {
 
 export function ContactList({ contacts }: { contacts: ContactItem[] }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {contacts.map((contact) => (
-        <Card key={contact.id}>
+        <Card key={contact.id} className="shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{contact.name}</CardTitle>
-            <CardDescription>{contact.relationshipType}</CardDescription>
+            <CardTitle>{contact.name}</CardTitle>
+            <CardDescription className="text-[15px]">{contact.relationshipType}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+          <CardContent className="space-y-2 text-[15px]">
             <p>{contact.company ?? "—"} {contact.role ? `· ${contact.role}` : ""}</p>
             <p className="text-muted-foreground">{contact.email ?? "No email"}</p>
             <p className="text-muted-foreground">Follow-up: {formatDate(contact.followUpDate)}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Linked applications: {contact.applications.map((a) => a.application.companyName).join(", ") || "None"}
             </p>
           </CardContent>

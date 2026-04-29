@@ -26,54 +26,54 @@ export default async function DashboardPage() {
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         <StatsGrid stats={stats} />
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <StatusPieChart data={stats.statusCounts} />
           <MonthlyBarChart data={stats.monthly} />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Upcoming deadlines</CardTitle>
+        <div className="grid gap-5 lg:grid-cols-3">
+          <Card className="shadow-sm">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-xl font-semibold tracking-tight">Upcoming deadlines</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 px-6 pb-6">
               {upcoming.deadlines.slice(0, 6).map((deadline) => (
                 <div key={deadline.id} className="flex items-center justify-between gap-2">
                   <span className="truncate">{deadline.companyName}</span>
                   <span className="text-muted-foreground">{formatDate(deadline.deadline)}</span>
                 </div>
               ))}
-              {upcoming.deadlines.length === 0 ? <p className="text-muted-foreground">No upcoming deadlines.</p> : null}
+              {upcoming.deadlines.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming deadlines.</p> : null}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Upcoming interviews</CardTitle>
+          <Card className="shadow-sm">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-xl font-semibold tracking-tight">Upcoming interviews</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 px-6 pb-6">
               {upcoming.interviews.slice(0, 6).map((interview) => (
                 <div key={interview.id} className="flex items-center justify-between gap-2">
                   <span className="truncate">{interview.application.companyName}</span>
                   <span className="text-muted-foreground">{formatDate(interview.scheduledAt)}</span>
                 </div>
               ))}
-              {upcoming.interviews.length === 0 ? <p className="text-muted-foreground">No upcoming interviews.</p> : null}
+              {upcoming.interviews.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming interviews.</p> : null}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Insights</CardTitle>
+          <Card className="shadow-sm">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-xl font-semibold tracking-tight">Insights</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 px-6 pb-6">
               {stats.insights.map((insight, idx) => (
-                <p key={idx} className="rounded-md border bg-muted/40 px-2 py-1">
+                <p key={idx} className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
                   {insight}
                 </p>
               ))}
-              {stats.insights.length === 0 ? <p className="text-muted-foreground">No insights yet.</p> : null}
+              {stats.insights.length === 0 ? <p className="text-sm text-muted-foreground">No insights yet.</p> : null}
             </CardContent>
           </Card>
         </div>

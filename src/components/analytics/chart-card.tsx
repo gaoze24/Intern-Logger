@@ -10,12 +10,12 @@ export function AnalyticsChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="shadow-sm">
+      <CardHeader className="p-6 pb-3">
+        <CardTitle className="text-xl font-semibold tracking-tight">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="px-6 pb-6">{children}</CardContent>
     </Card>
   );
 }

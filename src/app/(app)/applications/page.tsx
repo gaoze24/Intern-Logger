@@ -38,7 +38,7 @@ export default async function ApplicationsPage({
         </Link>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         <ApplicationsFilterBar />
         {applications.length === 0 ? (
           <EmptyState
@@ -56,14 +56,14 @@ export default async function ApplicationsPage({
 
         {view === "table" && applications.length > 0 ? <ApplicationTable applications={applications} /> : null}
         {view === "compact" && applications.length > 0 ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {applications.map((application) => (
-              <ApplicationCard key={application.id} application={application} />
-            ))}
-          </div>
-        ) : null}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {applications.map((application) => (
+                <ApplicationCard key={application.id} application={application} />
+              ))}
+            </div>
+          ) : null}
         {view === "kanban" && applications.length > 0 ? (
-          <div className="text-sm text-muted-foreground">Use the dedicated Kanban page for drag-and-drop workflow.</div>
+          <div className="text-[15px] text-muted-foreground">Use the dedicated Kanban page for drag-and-drop workflow.</div>
         ) : null}
       </div>
     </PageShell>

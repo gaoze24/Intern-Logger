@@ -10,22 +10,22 @@ export default async function AnalyticsPage() {
 
   return (
     <PageShell title="Analytics" description="Measure pipeline health and recruiting outcomes">
-      <div className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-2">
           <StatusPieChart data={summary.bySource} />
           <MonthlyBarChart data={summary.monthly} />
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <FunnelStatusChart data={funnel.map((item) => ({ status: item.status, count: item.count }))} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Performance metrics</CardTitle>
+          <Card className="shadow-sm">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-xl font-semibold tracking-tight">Performance metrics</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1 text-sm">
+            <CardContent className="space-y-2 px-6 pb-6">
               <p>Interview rate: {(summary.conversion.interviewRate * 100).toFixed(1)}%</p>
               <p>Offer rate: {(summary.conversion.offerRate * 100).toFixed(1)}%</p>
               <p>Rejection rate: {(summary.conversion.rejectionRate * 100).toFixed(1)}%</p>
-              <div className="pt-2 text-muted-foreground">
+              <div className="pt-3 text-sm text-muted-foreground">
                 {summary.insights.map((insight, idx) => (
                   <p key={idx}>• {insight}</p>
                 ))}

@@ -19,9 +19,9 @@ type TaskItem = {
 
 export function TaskList({ tasks }: { tasks: TaskItem[] }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {tasks.map((task) => (
-        <Card key={task.id}>
+        <Card key={task.id} className="shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
@@ -35,8 +35,8 @@ export function TaskList({ tasks }: { tasks: TaskItem[] }) {
                   }}
                 />
                 <div>
-                  <CardTitle className="text-base">{task.title}</CardTitle>
-                  <CardDescription>{task.application ? `${task.application.companyName} · ${task.application.roleTitle}` : "General task"}</CardDescription>
+                  <CardTitle>{task.title}</CardTitle>
+                  <CardDescription className="text-[15px]">{task.application ? `${task.application.companyName} · ${task.application.roleTitle}` : "General task"}</CardDescription>
                 </div>
               </div>
               <Button variant="outline" size="sm" disabled={task.completed}>
@@ -44,7 +44,7 @@ export function TaskList({ tasks }: { tasks: TaskItem[] }) {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-[15px] text-muted-foreground">
             <p>{task.description || "No notes"}</p>
             <p className="mt-2">Due: {formatDate(task.dueDate)}</p>
           </CardContent>

@@ -48,32 +48,32 @@ export function KanbanBoard({ applications }: { applications: ApplicationWithRel
   };
 
   return (
-    <div className="grid min-w-max grid-cols-12 gap-3 overflow-x-auto pb-2">
+    <div className="grid min-w-max grid-cols-12 gap-4 overflow-x-auto pb-2">
       {COLUMNS.map((column) => (
-        <Card key={column} className="w-72">
+        <Card key={column} className="w-80 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{STATUS_LABELS[column]}</CardTitle>
+            <CardTitle className="text-base font-semibold">{STATUS_LABELS[column]}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             {applications
               .filter((app) => app.status === column)
               .map((application) => (
                 <Card key={application.id} className="border-dashed">
-                  <CardHeader className="p-3 pb-2">
-                    <CardTitle className="text-sm">{application.companyName}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{application.roleTitle}</p>
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-[15px]">{application.companyName}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{application.roleTitle}</p>
                   </CardHeader>
-                  <CardContent className="space-y-2 p-3 pt-0">
+                  <CardContent className="space-y-3 p-4 pt-0">
                     <div className="flex items-center justify-between">
                       <PriorityBadge priority={application.priority} />
                       <DeadlineBadge deadline={application.deadline} />
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-2 gap-2">
                       {COLUMNS.filter((s) => s !== column).slice(0, 4).map((target) => (
                         <Button
                           key={target}
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           disabled={pending}
                           onClick={() => move(application.id, target)}
                         >

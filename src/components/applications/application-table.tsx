@@ -16,7 +16,7 @@ import { suggestNextAction } from "@/lib/utils/next-action";
 
 export function ApplicationTable({ applications }: { applications: ApplicationWithRelations[] }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -51,7 +51,7 @@ export function ApplicationTable({ applications }: { applications: ApplicationWi
                 <DeadlineBadge deadline={app.deadline} />
               </TableCell>
               <TableCell>{formatDate(app.appliedDate)}</TableCell>
-              <TableCell className="max-w-[230px] truncate">{suggestNextAction(app)}</TableCell>
+              <TableCell className="max-w-[260px] truncate text-muted-foreground">{suggestNextAction(app)}</TableCell>
               <TableCell>{formatDate(app.updatedAt)}</TableCell>
             </TableRow>
           ))}

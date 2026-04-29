@@ -25,7 +25,7 @@ export function ApplicationsFilterBar() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-3">
       <SearchInput
         value={search}
         onChange={(value) => {
@@ -39,7 +39,7 @@ export function ApplicationsFilterBar() {
       />
 
       <Select value={statusValue} onValueChange={(value) => updateParam("status", value ?? "")}>
-        <SelectTrigger className="w-52">
+        <SelectTrigger className="w-56">
           <SelectValue placeholder="Filter status" />
         </SelectTrigger>
         <SelectContent>
@@ -53,7 +53,7 @@ export function ApplicationsFilterBar() {
       </Select>
 
       <Select value={viewValue} onValueChange={(value) => updateParam("view", value ?? "")}>
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-48">
           <SelectValue placeholder="View" />
         </SelectTrigger>
         <SelectContent>

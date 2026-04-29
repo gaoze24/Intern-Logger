@@ -25,7 +25,7 @@ export function ExportDialog() {
           <DialogTitle>Export data</DialogTitle>
           <DialogDescription>Download your data in JSON or CSV format.</DialogDescription>
         </DialogHeader>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <form action="/api/export/json" method="get">
             <Button type="submit" variant="outline">JSON</Button>
           </form>

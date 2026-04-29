@@ -10,15 +10,15 @@ type TimelineItem = {
 
 export function Timeline({ items }: { items: TimelineItem[] }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item) => (
-        <div key={item.id} className="rounded-md border p-3">
+        <div key={item.id} className="rounded-lg border p-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-medium">{item.title}</p>
-            <span className="text-xs text-muted-foreground">{formatDate(item.occurredAt)}</span>
+            <p className="text-[15px] font-medium">{item.title}</p>
+            <span className="text-sm text-muted-foreground">{formatDate(item.occurredAt)}</span>
           </div>
-          <p className="text-xs text-muted-foreground">{item.type.replaceAll("_", " ")}</p>
-          {item.description ? <p className="mt-1 text-sm">{item.description}</p> : null}
+          <p className="text-sm text-muted-foreground">{item.type.replaceAll("_", " ")}</p>
+          {item.description ? <p className="mt-1 text-[15px]">{item.description}</p> : null}
         </div>
       ))}
     </div>

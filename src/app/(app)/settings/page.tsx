@@ -7,23 +7,23 @@ import { ImportCsvDialog } from "@/components/settings/import-csv-dialog";
 export default function SettingsPage() {
   return (
     <PageShell title="Settings" description="Profile, preferences, and data controls">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">Profile</CardTitle>
             <CardDescription>Configure your school and target role details.</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-[15px] text-muted-foreground">
             Profile preferences are backed by the UserSettings model and ready for expanded UI controls.
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Data export</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">Data export</CardTitle>
             <CardDescription>Export your internship tracker data as JSON or CSV.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <form action="/api/export/json" method="get">
               <Button type="submit" variant="outline" className="w-full justify-start">
                 <Download className="mr-1 size-4" />

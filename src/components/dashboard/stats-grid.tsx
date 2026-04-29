@@ -22,14 +22,14 @@ const ITEMS: { key: keyof Stats; title: string; description: string }[] = [
 
 export function StatsGrid({ stats }: { stats: Stats }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {ITEMS.map((item) => (
-        <Card key={item.key}>
-          <CardHeader className="pb-2">
-            <CardDescription>{item.title}</CardDescription>
-            <CardTitle className="text-2xl">{stats[item.key]}</CardTitle>
+        <Card key={item.key} className="shadow-sm">
+          <CardHeader className="space-y-3 p-6 pb-2">
+            <CardDescription className="text-sm font-medium">{item.title}</CardDescription>
+            <CardTitle className="text-4xl font-semibold tracking-tight">{stats[item.key]}</CardTitle>
           </CardHeader>
-          <CardContent className="text-xs text-muted-foreground">{item.description}</CardContent>
+          <CardContent className="px-6 pb-6 text-sm text-muted-foreground">{item.description}</CardContent>
         </Card>
       ))}
     </div>

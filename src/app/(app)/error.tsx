@@ -10,9 +10,9 @@ export default function AppError({ error, reset }: { error: Error; reset: () => 
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="max-w-md space-y-3 rounded-xl border p-5 text-center">
-        <h2 className="text-lg font-semibold">Something went wrong</h2>
-        <p className="text-sm text-muted-foreground">{error.message || "Unexpected error"}</p>
+      <div className="max-w-md space-y-3 rounded-xl border p-6 text-center shadow-sm">
+        <h2 className="text-2xl font-semibold tracking-tight">Something went wrong</h2>
+        <p className="text-[15px] text-muted-foreground">{error.message || "Unexpected error"}</p>
         <Button onClick={() => reset()}>Try again</Button>
       </div>
     </main>

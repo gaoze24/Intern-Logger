@@ -9,14 +9,14 @@ type ActivityItem = {
 
 export function ActivityLog({ items }: { items: ActivityItem[] }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="rounded-md border p-3 text-sm">
+        <div key={item.id} className="rounded-lg border p-4 text-[15px]">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium">{item.action.replaceAll("_", " ")}</span>
-            <span className="text-xs text-muted-foreground">{formatDate(item.createdAt)}</span>
+            <span className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</span>
           </div>
-          <span className="text-xs text-muted-foreground">{item.entityType.toLowerCase()}</span>
+          <span className="text-sm text-muted-foreground">{item.entityType.toLowerCase()}</span>
         </div>
       ))}
     </div>

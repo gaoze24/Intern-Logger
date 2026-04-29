@@ -50,9 +50,9 @@ export default function EmailTemplatesPage() {
 
   return (
     <PageShell title="Email templates" description="Generate editable, copyable career communication templates">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3 rounded-xl border p-4">
-          <div className="space-y-1.5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-4 rounded-xl border p-6 shadow-sm">
+          <div className="space-y-2">
             <Label>Template</Label>
             <Select value={type} onValueChange={(value) => setType(value as TemplateType)}>
               <SelectTrigger>
@@ -67,22 +67,22 @@ export default function EmailTemplatesPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5"><Label>Contact</Label><Input value={contactName} onChange={(e) => setContactName(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Company</Label><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Role</Label><Input value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Interview date</Label><Input value={interviewDate} onChange={(e) => setInterviewDate(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>User name</Label><Input value={userName} onChange={(e) => setUserName(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Specific topic</Label><Input value={specificTopicDiscussed} onChange={(e) => setSpecificTopicDiscussed(e.target.value)} /></div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Contact</Label><Input value={contactName} onChange={(e) => setContactName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Company</Label><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Role</Label><Input value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Interview date</Label><Input value={interviewDate} onChange={(e) => setInterviewDate(e.target.value)} /></div>
+            <div className="space-y-2"><Label>User name</Label><Input value={userName} onChange={(e) => setUserName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Specific topic</Label><Input value={specificTopicDiscussed} onChange={(e) => setSpecificTopicDiscussed(e.target.value)} /></div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Custom notes</Label>
             <Textarea rows={4} value={customNotes} onChange={(e) => setCustomNotes(e.target.value)} />
           </div>
         </div>
-        <div className="space-y-2 rounded-xl border p-4">
+        <div className="space-y-3 rounded-xl border p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium">Preview</h3>
+            <h3 className="text-lg font-semibold tracking-tight">Preview</h3>
             <Button
               variant="outline"
               onClick={async () => {

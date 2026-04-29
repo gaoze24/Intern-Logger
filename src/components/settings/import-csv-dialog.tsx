@@ -56,14 +56,14 @@ export function ImportCsvDialog() {
           <DialogTitle>Import applications from CSV</DialogTitle>
           <DialogDescription>Paste CSV content, preview, then import valid rows.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Textarea rows={10} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="companyName,roleTitle,location,..." />
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={parsePreview}>Preview</Button>
-            <Button onClick={importCsv}>Import</Button>
-          </div>
-          {previewRows.length > 0 ? (
-            <div className="rounded-md border p-2 text-xs">
+          <div className="space-y-4">
+            <Textarea rows={10} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="companyName,roleTitle,location,..." />
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={parsePreview}>Preview</Button>
+              <Button onClick={importCsv}>Import</Button>
+            </div>
+            {previewRows.length > 0 ? (
+            <div className="rounded-md border p-3 text-sm">
               {previewRows.map((row, idx) => (
                 <pre key={idx} className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(row, null, 2)}</pre>
               ))}

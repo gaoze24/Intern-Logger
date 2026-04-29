@@ -60,20 +60,20 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
   };
 
   return (
-    <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1.5">
+    <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="space-y-2">
           <Label htmlFor="companyName">Company</Label>
           <Input id="companyName" {...form.register("companyName")} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Label htmlFor="roleTitle">Role title</Label>
           <Input id="roleTitle" {...form.register("roleTitle")} />
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-1.5">
+      <div className="grid gap-5 md:grid-cols-3">
+        <div className="space-y-2">
           <Label>Status</Label>
           <Controller
             control={form.control}
@@ -94,7 +94,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
             )}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Label>Priority</Label>
           <Controller
             control={form.control}
@@ -115,7 +115,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
             )}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Label>Work mode</Label>
           <Controller
             control={form.control}
@@ -138,18 +138,18 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1.5">
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="space-y-2">
           <Label htmlFor="location">Location</Label>
           <Input id="location" {...form.register("location")} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <Label htmlFor="country">Country</Label>
           <Input id="country" {...form.register("country")} />
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Label>Source</Label>
         <Controller
           control={form.control}
@@ -171,17 +171,17 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
         />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Label htmlFor="applicationUrl">Application URL</Label>
         <Input id="applicationUrl" placeholder="https://..." {...form.register("applicationUrl")} />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Label htmlFor="jobPostingUrl">Job posting URL</Label>
         <Input id="jobPostingUrl" placeholder="https://..." {...form.register("jobPostingUrl")} />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" rows={5} {...form.register("notes")} />
       </div>

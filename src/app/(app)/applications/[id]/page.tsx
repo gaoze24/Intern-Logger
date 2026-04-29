@@ -28,8 +28,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       description="Full application profile"
       actions={<ExportDialog />}
     >
-      <div className="space-y-4">
-        <Card>
+      <div className="space-y-5">
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2 text-xl">
               <span>{application.companyName}</span>
@@ -38,7 +38,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               <DeadlineBadge deadline={application.deadline} />
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2 text-sm md:grid-cols-2">
+          <CardContent className="grid gap-3 text-[15px] md:grid-cols-2">
             <p><span className="text-muted-foreground">Location:</span> {application.location ?? "—"}</p>
             <p><span className="text-muted-foreground">Work mode:</span> {application.workMode}</p>
             <p><span className="text-muted-foreground">Season:</span> {application.season ?? "—"}</p>
@@ -59,27 +59,27 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <Card>
+          <TabsContent value="overview" className="space-y-5">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Job description</CardTitle>
               </CardHeader>
-              <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <CardContent className="whitespace-pre-wrap text-[15px] text-muted-foreground">
                 {application.jobDescription || "No job description saved yet."}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Notes</CardTitle>
               </CardHeader>
-              <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <CardContent className="whitespace-pre-wrap text-[15px] text-muted-foreground">
                 {application.notes || "No notes yet."}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="edit">
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Edit application</CardTitle>
               </CardHeader>
@@ -112,20 +112,20 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </TabsContent>
 
           <TabsContent value="interviews">
-            <div className="space-y-2">
+            <div className="space-y-3">
               {application.interviews.map((interview) => (
-                <Card key={interview.id}>
+                <Card key={interview.id} className="shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{interview.title}</CardTitle>
+                    <CardTitle>{interview.title}</CardTitle>
                   </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground">
+                  <CardContent className="text-[15px] text-muted-foreground">
                     <p>{interview.type.replaceAll("_", " ")}</p>
                     <p>{formatDate(interview.scheduledAt)}</p>
                     <p>{interview.interviewerName ?? "No interviewer specified"}</p>
                   </CardContent>
                 </Card>
               ))}
-              {application.interviews.length === 0 ? <p className="text-sm text-muted-foreground">No interviews yet.</p> : null}
+              {application.interviews.length === 0 ? <p className="text-[15px] text-muted-foreground">No interviews yet.</p> : null}
             </div>
           </TabsContent>
 

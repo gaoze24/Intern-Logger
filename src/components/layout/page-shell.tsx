@@ -15,16 +15,16 @@ export function PageShell({
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <div className="flex w-full flex-col">
-        <header className="border-b px-4 py-3 md:px-6">
+        <header className="border-b px-5 py-4 md:px-8 md:py-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-xl font-semibold">{title}</h1>
-              {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+              <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+              {description ? <p className="mt-1 text-base text-muted-foreground">{description}</p> : null}
             </div>
             {actions}
           </div>
         </header>
-        <main className="flex-1 px-4 pb-24 pt-4 md:px-6 md:pb-6">{children}</main>
+        <main className="flex-1 px-5 pb-28 pt-5 md:px-8 md:pb-8 md:pt-6">{children}</main>
       </div>
       <MobileSidebar />
     </div>

@@ -22,24 +22,24 @@ export function CalendarView({ events }: { events: CalendarEvent[] }) {
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-      <Card>
-        <CardContent className="p-2">
+    <div className="grid gap-5 lg:grid-cols-[auto_1fr]">
+      <Card className="shadow-sm">
+        <CardContent className="p-3">
           <Calendar mode="single" selected={date} onSelect={setDate} />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Agenda</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-xl font-semibold tracking-tight">Agenda</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3 px-6 pb-6">
           {selectedEvents.map((event) => (
-            <div key={event.id} className="rounded-md border p-2 text-sm">
+            <div key={event.id} className="rounded-md border p-3 text-[15px]">
               <p className="font-medium">{event.title}</p>
-              <p className="text-xs text-muted-foreground">{event.type} · {formatDate(event.date)}</p>
+              <p className="text-sm text-muted-foreground">{event.type} · {formatDate(event.date)}</p>
             </div>
           ))}
-          {selectedEvents.length === 0 ? <p className="text-sm text-muted-foreground">No events for selected day.</p> : null}
+          {selectedEvents.length === 0 ? <p className="text-[15px] text-muted-foreground">No events for selected day.</p> : null}
         </CardContent>
       </Card>
     </div>

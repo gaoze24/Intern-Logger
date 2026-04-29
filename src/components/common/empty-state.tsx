@@ -9,10 +9,10 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, icon: Icon, action }: EmptyStateProps) {
   return (
-    <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-8 text-center">
-      <Icon className="size-10 text-muted-foreground" />
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
+    <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center">
+      <Icon className="size-11 text-muted-foreground" />
+      <h3 className="text-xl font-semibold tracking-tight">{title}</h3>
+      <p className="max-w-md text-[15px] text-muted-foreground">{description}</p>
       {action}
     </div>
   );
