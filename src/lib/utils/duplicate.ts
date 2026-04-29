@@ -1,4 +1,4 @@
-import type { Application } from "@prisma/client";
+import type { InternshipSeason } from "@prisma/client";
 
 function similarity(a: string, b: string) {
   const x = a.toLowerCase();
@@ -17,9 +17,23 @@ export type DuplicateSignal = {
   score: number;
 };
 
+export type DuplicateComparableApplication = {
+  id: string;
+  companyName: string;
+  roleTitle: string;
+  season: InternshipSeason | null;
+  jobPostingUrl: string | null;
+  applicationUrl: string | null;
+};
+
+export type DuplicateIncomingApplication = Pick<
+  DuplicateComparableApplication,
+  "companyName" | "roleTitle" | "season" | "jobPostingUrl" | "applicationUrl"
+>;
+
 export function detectDuplicates(
-  existing: Application[],
-  incoming: Pick<Application, "companyName" | "roleTitle" | "season" | "jobPostingUrl" | "applicationUrl">,
+  existing: DuplicateComparableApplication[],
+  incoming: DuplicateIncomingApplication,
 ): DuplicateSignal[] {
   const signals: DuplicateSignal[] = [];
 

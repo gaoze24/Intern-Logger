@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ApplicationWithRelations } from "@/types";
+import type { ApplicationListItem } from "@/lib/services/applications";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { DeadlineBadge } from "@/components/applications/deadline-badge";
 import { formatDate } from "@/lib/utils/date";
 import { suggestNextAction } from "@/lib/utils/next-action";
 
-export function ApplicationTable({ applications }: { applications: ApplicationWithRelations[] }) {
+export function ApplicationTable({ applications }: { applications: ApplicationListItem[] }) {
   return (
     <div className="rounded-xl border bg-card shadow-sm">
       <Table>
@@ -51,7 +51,9 @@ export function ApplicationTable({ applications }: { applications: ApplicationWi
                 <DeadlineBadge deadline={app.deadline} />
               </TableCell>
               <TableCell>{formatDate(app.appliedDate)}</TableCell>
-              <TableCell className="max-w-[260px] truncate text-muted-foreground">{suggestNextAction(app)}</TableCell>
+              <TableCell className="max-w-[260px] truncate text-muted-foreground">
+                {suggestNextAction({ status: app.status, updatedAt: app.updatedAt, deadline: app.deadline })}
+              </TableCell>
               <TableCell>{formatDate(app.updatedAt)}</TableCell>
             </TableRow>
           ))}

@@ -2,6 +2,7 @@ import {
   ActivityEntityType,
   ApplicationStatusType,
   Prisma,
+  type InternshipSeason,
   TimelineEventType,
 } from "@prisma/client";
 import sanitizeHtml from "sanitize-html";
@@ -22,6 +23,15 @@ const applicationInclude = {
   customStatus: true,
 } satisfies Prisma.ApplicationInclude;
 
+type DuplicateComparableApplication = {
+  id: string;
+  companyName: string;
+  roleTitle: string;
+  season: InternshipSeason | null;
+  jobPostingUrl: string | null;
+  applicationUrl: string | null;
+};
+
 export type ApplicationFilters = {
   includeArchived?: boolean;
   search?: string;
@@ -29,8 +39,45 @@ export type ApplicationFilters = {
   priorities?: string[];
 };
 
-export async function getApplications(userId: string, filters: ApplicationFilters = {}) {
-  const where: Prisma.ApplicationWhereInput = {
+export type ApplicationListFilters = ApplicationFilters & {
+  page?: number;
+  pageSize?: number;
+};
+
+const applicationListSelect = {
+  id: true,
+  companyName: true,
+  roleTitle: true,
+  location: true,
+  workMode: true,
+  status: true,
+  priority: true,
+  deadline: true,
+  appliedDate: true,
+  updatedAt: true,
+} satisfies Prisma.ApplicationSelect;
+
+export type ApplicationListItem = Prisma.ApplicationGetPayload<{ select: typeof applicationListSelect }>;
+export type KanbanApplicationItem = Prisma.ApplicationGetPayload<{
+  select: {
+    id: true;
+    companyName: true;
+    roleTitle: true;
+    status: true;
+    priority: true;
+    deadline: true;
+  };
+}>;
+export type PaginatedResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+function buildApplicationWhere(userId: string, filters: ApplicationFilters): Prisma.ApplicationWhereInput {
+  return {
     userId,
     archived: filters.includeArchived ? undefined : false,
     status: filters.statuses?.length ? { in: filters.statuses } : undefined,
@@ -40,17 +87,60 @@ export async function getApplications(userId: string, filters: ApplicationFilter
           { companyName: { contains: filters.search, mode: "insensitive" } },
           { roleTitle: { contains: filters.search, mode: "insensitive" } },
           { notes: { contains: filters.search, mode: "insensitive" } },
-          { jobDescription: { contains: filters.search, mode: "insensitive" } },
           { tags: { some: { tag: { name: { contains: filters.search, mode: "insensitive" } } } } },
           { contacts: { some: { contact: { name: { contains: filters.search, mode: "insensitive" } } } } },
         ]
       : undefined,
   };
+}
 
+export async function getApplications(userId: string, filters: ApplicationFilters = {}) {
   return db.application.findMany({
-    where,
+    where: buildApplicationWhere(userId, filters),
     include: applicationInclude,
     orderBy: [{ archived: "asc" }, { updatedAt: "desc" }],
+  });
+}
+
+export async function getApplicationsList(
+  userId: string,
+  filters: ApplicationListFilters = {},
+): Promise<PaginatedResult<ApplicationListItem>> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 25));
+  const where = buildApplicationWhere(userId, filters);
+  const [total, items] = await Promise.all([
+    db.application.count({ where }),
+    db.application.findMany({
+      where,
+      select: applicationListSelect,
+      orderBy: [{ archived: "asc" }, { updatedAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+export async function getKanbanApplications(userId: string) {
+  return db.application.findMany({
+    where: { userId, archived: false },
+    select: {
+      id: true,
+      companyName: true,
+      roleTitle: true,
+      status: true,
+      priority: true,
+      deadline: true,
+    },
+    orderBy: { updatedAt: "desc" },
   });
 }
 
@@ -63,7 +153,17 @@ export async function getApplicationById(userId: string, id: string) {
 
 export async function createApplication(userId: string, input: unknown) {
   const parsed = applicationSchema.parse(input);
-  const existing = await db.application.findMany({ where: { userId } });
+  const existing = (await db.application.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      companyName: true,
+      roleTitle: true,
+      season: true,
+      jobPostingUrl: true,
+      applicationUrl: true,
+    },
+  })) satisfies DuplicateComparableApplication[];
   const duplicates = detectDuplicates(existing, {
     companyName: parsed.companyName,
     roleTitle: parsed.roleTitle,

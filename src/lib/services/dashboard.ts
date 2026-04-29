@@ -1,43 +1,141 @@
-import { addDays, startOfDay } from "date-fns";
-import { ApplicationStatusType } from "@prisma/client";
+import { addDays, format, startOfDay } from "date-fns";
+import { ApplicationStatusType, Prisma, ReminderType } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getApplications } from "@/lib/services/applications";
-import { generateInsights, getApplicationsByMonth, getConversionRates } from "@/lib/analytics/metrics";
 
-export async function getDashboardStats(userId: string) {
-  const applications = await getApplications(userId, { includeArchived: false });
-  const now = new Date();
-  const weekEnd = addDays(startOfDay(now), 7);
+const finalStatuses = [
+  ApplicationStatusType.REJECTED,
+  ApplicationStatusType.WITHDRAWN,
+  ApplicationStatusType.ARCHIVED,
+];
 
-  const finalStatuses = new Set<ApplicationStatusType>([
-    ApplicationStatusType.REJECTED,
-    ApplicationStatusType.WITHDRAWN,
-    ApplicationStatusType.ARCHIVED,
-  ]);
-  const totalApplications = applications.length;
-  const activeApplications = applications.filter((app) => !finalStatuses.has(app.status)).length;
-  const offers = applications.filter((app) => app.status === ApplicationStatusType.OFFER).length;
-  const rejections = applications.filter((app) => app.status === ApplicationStatusType.REJECTED).length;
-  const interviewsUpcoming = applications.reduce(
-    (count, app) => count + app.interviews.filter((i) => i.scheduledAt > now).length,
-    0,
-  );
-  const deadlinesThisWeek = applications.filter(
-    (app) => app.deadline && app.deadline >= now && app.deadline <= weekEnd,
-  ).length;
-  const followUpsDue = applications.reduce(
-    (count, app) => count + app.reminders.filter((r) => !r.completed && r.remindAt <= weekEnd).length,
-    0,
-  );
+const interviewStatuses = [
+  ApplicationStatusType.RECRUITER_SCREEN,
+  ApplicationStatusType.TECHNICAL_INTERVIEW,
+  ApplicationStatusType.BEHAVIORAL_INTERVIEW,
+  ApplicationStatusType.FINAL_ROUND,
+  ApplicationStatusType.OFFER,
+];
 
-  const statusCounts = applications.reduce<Record<string, number>>((acc, app) => {
-    acc[app.status] = (acc[app.status] ?? 0) + 1;
+function countRowsToRecord<T extends string>(rows: { key: T; count: number }[]) {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.key] = row.count;
     return acc;
   }, {});
+}
 
-  const monthly = getApplicationsByMonth(applications);
-  const conversion = getConversionRates(applications);
-  const insights = generateInsights(applications);
+function statusGroupsToRecord(rows: { status: ApplicationStatusType; _count: { _all: number } }[]) {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.status] = row._count._all;
+    return acc;
+  }, {});
+}
+
+function getConversionRatesFromCounts(statusCounts: Record<string, number>, totalCount: number) {
+  const total = totalCount || 1;
+  const interviews = interviewStatuses.reduce((sum, status) => sum + (statusCounts[status] ?? 0), 0);
+  return {
+    interviewRate: interviews / total,
+    offerRate: (statusCounts[ApplicationStatusType.OFFER] ?? 0) / total,
+    rejectionRate: (statusCounts[ApplicationStatusType.REJECTED] ?? 0) / total,
+  };
+}
+
+async function getMonthlyApplicationCounts(userId: string, includeArchived: boolean) {
+  const archivedClause = includeArchived ? Prisma.empty : Prisma.sql`AND "archived" = false`;
+  const rows = await db.$queryRaw<{ month: Date; count: bigint }[]>`
+    SELECT date_trunc('month', "createdAt") AS month, COUNT(*) AS count
+    FROM "Application"
+    WHERE "userId" = ${userId} ${archivedClause}
+    GROUP BY month
+    ORDER BY month ASC
+  `;
+
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    acc[format(row.month, "yyyy-MM")] = Number(row.count);
+    return acc;
+  }, {});
+}
+
+async function getInsights(userId: string, totalApplications: number, includeArchived: boolean) {
+  const now = new Date();
+  const weekEnd = addDays(startOfDay(now), 7);
+  const staleAppliedCutoff = addDays(now, -14);
+  const archivedFilter = includeArchived ? undefined : false;
+
+  const [waitingForResponse, linkedDocuments, highPriorityThisWeek] = await Promise.all([
+    db.application.count({
+      where: {
+        userId,
+        archived: archivedFilter,
+        status: ApplicationStatusType.APPLIED,
+        updatedAt: { lt: staleAppliedCutoff },
+      },
+    }),
+    db.applicationDocument.count({
+      where: { application: { userId, archived: archivedFilter } },
+    }),
+    db.application.count({
+      where: {
+        userId,
+        archived: archivedFilter,
+        priority: { in: ["HIGH", "DREAM"] },
+        deadline: { gte: now, lte: weekEnd },
+      },
+    }),
+  ]);
+
+  const insights: string[] = [];
+  if (waitingForResponse > 0) {
+    insights.push(`You have ${waitingForResponse} applications waiting for response for more than 14 days.`);
+  }
+  if (linkedDocuments === 0 && totalApplications > 0) {
+    insights.push("No applications have documents linked yet. Attach resume versions to improve tracking.");
+  }
+  if (highPriorityThisWeek > 0) {
+    insights.push(`${highPriorityThisWeek} high-priority deadlines are due this week.`);
+  }
+  return insights;
+}
+
+export async function getDashboardStats(userId: string) {
+  const now = new Date();
+  const weekEnd = addDays(startOfDay(now), 7);
+  const [
+    totalApplications,
+    activeApplications,
+    offers,
+    rejections,
+    interviewsUpcoming,
+    deadlinesThisWeek,
+    followUpsDue,
+    statusGroups,
+    monthly,
+  ] = await Promise.all([
+    db.application.count({ where: { userId, archived: false } }),
+    db.application.count({ where: { userId, archived: false, status: { notIn: finalStatuses } } }),
+    db.application.count({ where: { userId, archived: false, status: ApplicationStatusType.OFFER } }),
+    db.application.count({ where: { userId, archived: false, status: ApplicationStatusType.REJECTED } }),
+    db.interview.count({ where: { userId, scheduledAt: { gte: now } } }),
+    db.application.count({ where: { userId, archived: false, deadline: { gte: now, lte: weekEnd } } }),
+    db.reminder.count({
+      where: {
+        userId,
+        completed: false,
+        type: ReminderType.FOLLOW_UP,
+        remindAt: { lte: weekEnd },
+      },
+    }),
+    db.application.groupBy({
+      by: ["status"],
+      where: { userId, archived: false },
+      _count: { _all: true },
+    }),
+    getMonthlyApplicationCounts(userId, false),
+  ]);
+
+  const statusCounts = statusGroupsToRecord(statusGroups);
+  const conversion = getConversionRatesFromCounts(statusCounts, totalApplications);
+  const insights = await getInsights(userId, totalApplications, false);
 
   return {
     totalApplications,
@@ -55,36 +153,51 @@ export async function getDashboardStats(userId: string) {
 }
 
 export async function getAnalyticsSummary(userId: string) {
-  const applications = await getApplications(userId, { includeArchived: true });
-  const bySource = applications.reduce<Record<string, number>>((acc, app) => {
-    acc[app.source] = (acc[app.source] ?? 0) + 1;
-    return acc;
-  }, {});
+  const [totalApplications, archivedApplications, sourceGroups, priorityGroups, statusGroups, monthly] =
+    await Promise.all([
+      db.application.count({ where: { userId } }),
+      db.application.count({ where: { userId, archived: true } }),
+      db.application.groupBy({
+        by: ["source"],
+        where: { userId },
+        _count: { _all: true },
+      }),
+      db.application.groupBy({
+        by: ["priority"],
+        where: { userId },
+        _count: { _all: true },
+      }),
+      db.application.groupBy({
+        by: ["status"],
+        where: { userId },
+        _count: { _all: true },
+      }),
+      getMonthlyApplicationCounts(userId, true),
+    ]);
 
-  const byPriority = applications.reduce<Record<string, number>>((acc, app) => {
-    acc[app.priority] = (acc[app.priority] ?? 0) + 1;
-    return acc;
-  }, {});
+  const statusCounts = statusGroupsToRecord(statusGroups);
 
   return {
     totals: {
-      totalApplications: applications.length,
-      archivedApplications: applications.filter((app) => app.archived).length,
-      activeApplications: applications.filter((app) => !app.archived).length,
+      totalApplications,
+      archivedApplications,
+      activeApplications: totalApplications - archivedApplications,
     },
-    bySource,
-    byPriority,
-    conversion: getConversionRates(applications),
-    monthly: getApplicationsByMonth(applications),
-    insights: generateInsights(applications),
+    bySource: countRowsToRecord(sourceGroups.map((row) => ({ key: row.source, count: row._count._all }))),
+    byPriority: countRowsToRecord(priorityGroups.map((row) => ({ key: row.priority, count: row._count._all }))),
+    conversion: getConversionRatesFromCounts(statusCounts, totalApplications),
+    monthly,
+    insights: await getInsights(userId, totalApplications, true),
   };
 }
 
 export async function getApplicationFunnel(userId: string) {
-  const applications = await db.application.findMany({
+  const statusGroups = await db.application.groupBy({
+    by: ["status"],
     where: { userId },
-    select: { status: true },
+    _count: { _all: true },
   });
+  const statusCounts = statusGroupsToRecord(statusGroups);
   const order = [
     ApplicationStatusType.APPLIED,
     ApplicationStatusType.ONLINE_ASSESSMENT,
@@ -94,7 +207,7 @@ export async function getApplicationFunnel(userId: string) {
   ];
   return order.map((status) => ({
     status,
-    count: applications.filter((app) => app.status === status).length,
+    count: statusCounts[status] ?? 0,
   }));
 }
 

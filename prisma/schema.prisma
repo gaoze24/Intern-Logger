@@ -212,9 +212,20 @@ model Application {
   contacts          ApplicationContact[]
   documents         ApplicationDocument[]
 
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([deadline])
+  @@index([appliedDate])
+  @@index([archived])
   @@index([userId, archived, status])
+  @@index([userId, status])
+  @@index([userId, archived])
   @@index([userId, companyName, roleTitle])
+  @@index([userId, companyName])
+  @@index([userId, roleTitle])
   @@index([userId, deadline])
+  @@index([userId, updatedAt])
   @@index([updatedAt])
 }
 
@@ -278,6 +289,9 @@ model Interview {
   application       Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   reminders         Reminder[]
 
+  @@index([userId])
+  @@index([applicationId])
+  @@index([scheduledAt])
   @@index([userId, scheduledAt])
 }
 
@@ -297,6 +311,12 @@ model Task {
   application     Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   reminders       Reminder[]
 
+  @@index([userId])
+  @@index([applicationId])
+  @@index([dueDate])
+  @@index([completed])
+  @@index([userId, dueDate])
+  @@index([userId, completed])
   @@index([userId, completed, dueDate])
 }
 
@@ -318,6 +338,9 @@ model Contact {
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications     ApplicationContact[]
 
+  @@index([userId])
+  @@index([company])
+  @@index([followUpDate])
   @@index([userId, followUpDate])
 }
 
@@ -344,6 +367,10 @@ model Document {
   updatedAt     DateTime               @updatedAt
   user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications  ApplicationDocument[]
+
+  @@index([userId])
+  @@index([updatedAt])
+  @@index([userId, updatedAt])
 }
 
 model ApplicationDocument {
@@ -405,6 +432,11 @@ model Reminder {
   interview     Interview?    @relation(fields: [interviewId], references: [id], onDelete: SetNull)
   task          Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+  @@index([remindAt])
+  @@index([completed])
+  @@index([userId, remindAt])
+  @@index([userId, completed])
   @@index([userId, remindAt, completed])
 }
 

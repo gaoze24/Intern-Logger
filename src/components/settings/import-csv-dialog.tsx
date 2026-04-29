@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Papa from "papaparse";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +18,8 @@ export function ImportCsvDialog() {
   const [csv, setCsv] = useState("");
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
 
-  const parsePreview = () => {
+  const parsePreview = async () => {
+    const Papa = (await import("papaparse")).default;
     const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
     if (parsed.errors.length) {
       toast.error(parsed.errors[0].message);

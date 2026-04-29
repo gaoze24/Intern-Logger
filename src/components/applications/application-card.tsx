@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
-import type { ApplicationWithRelations } from "@/types";
+import type { ApplicationListItem } from "@/lib/services/applications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/applications/status-badge";
 import { PriorityBadge } from "@/components/applications/priority-badge";
 import { DeadlineBadge } from "@/components/applications/deadline-badge";
 import { suggestNextAction } from "@/lib/utils/next-action";
 
-export function ApplicationCard({ application }: { application: ApplicationWithRelations }) {
+export function ApplicationCard({ application }: { application: ApplicationListItem }) {
   return (
     <Link href={`/applications/${application.id}`}>
       <Card className="transition-all hover:border-primary/50 hover:shadow-sm">
@@ -26,7 +26,7 @@ export function ApplicationCard({ application }: { application: ApplicationWithR
             <CalendarDays className="size-4" />
             <DeadlineBadge deadline={application.deadline} />
           </div>
-          <p className="text-sm text-muted-foreground">{suggestNextAction(application)}</p>
+          <p className="text-sm text-muted-foreground">{suggestNextAction({ status: application.status, updatedAt: application.updatedAt, deadline: application.deadline })}</p>
         </CardContent>
       </Card>
     </Link>

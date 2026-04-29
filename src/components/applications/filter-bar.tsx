@@ -1,16 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ApplicationStatusType } from "@prisma/client";
-import { SearchInput } from "@/components/common/search-input";
+import { SearchParamInput } from "@/components/common/search-param-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ApplicationsFilterBar() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [search, setSearch] = useState(params.get("search") ?? "");
 
   const statusValue = params.get("status") ?? "ALL";
   const viewValue = params.get("view") ?? "table";
@@ -21,22 +20,13 @@ export function ApplicationsFilterBar() {
     const next = new URLSearchParams(params.toString());
     if (!value || value === "ALL") next.delete(key);
     else next.set(key, value);
+    next.set("page", "1");
     router.push(`${pathname}?${next.toString()}`);
   };
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <SearchInput
-        value={search}
-        onChange={(value) => {
-          setSearch(value);
-          const next = new URLSearchParams(params.toString());
-          if (value) next.set("search", value);
-          else next.delete("search");
-          router.push(`${pathname}?${next.toString()}`);
-        }}
-        placeholder="Search company, role, notes, recruiter..."
-      />
+      <SearchParamInput placeholder="Search company, role, notes, recruiter..." />
 
       <Select value={statusValue} onValueChange={(value) => updateParam("status", value ?? "")}>
         <SelectTrigger className="w-56">

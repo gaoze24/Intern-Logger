@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { ApplicationStatusType } from "@prisma/client";
-import type { ApplicationWithRelations } from "@/types";
+import type { KanbanApplicationItem } from "@/lib/services/applications";
 import { changeApplicationStatusAction } from "@/actions/applications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ const COLUMNS: ApplicationStatusType[] = [
 
 const FINAL_STATES: ApplicationStatusType[] = ["REJECTED", "WITHDRAWN", "ARCHIVED"];
 
-export function KanbanBoard({ applications }: { applications: ApplicationWithRelations[] }) {
+export function KanbanBoard({ applications }: { applications: KanbanApplicationItem[] }) {
   const [pending, startTransition] = useTransition();
 
   const move = (id: string, status: ApplicationStatusType) => {

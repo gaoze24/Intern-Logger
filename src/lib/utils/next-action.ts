@@ -1,15 +1,22 @@
 import { addDays, isBefore } from "date-fns";
 import { ApplicationStatusType } from "@prisma/client";
-import type { ApplicationWithRelations } from "@/types";
+type NextActionApplication = {
+  status: ApplicationStatusType;
+  updatedAt: Date;
+  deadline?: Date | null;
+  interviews?: { scheduledAt: Date }[];
+  documents?: { document: { type: string } }[];
+  jobDescription?: string | null;
+};
 
-export function suggestNextAction(application: ApplicationWithRelations): string {
+export function suggestNextAction(application: NextActionApplication): string {
   const now = new Date();
 
   if (application.status === ApplicationStatusType.APPLIED && isBefore(application.updatedAt, addDays(now, -14))) {
     return "Send follow-up to recruiter";
   }
 
-  const upcomingInterview = application.interviews
+  const upcomingInterview = (application.interviews ?? [])
     .filter((interview) => interview.scheduledAt > now)
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
   if (upcomingInterview && isBefore(upcomingInterview.scheduledAt, addDays(now, 3))) {
@@ -20,8 +27,8 @@ export function suggestNextAction(application: ApplicationWithRelations): string
     return "Review offer before deadline";
   }
 
-  const hasResume = application.documents.some((document) => document.document.type === "RESUME");
-  if (application.jobDescription && !hasResume) {
+  const hasResume = (application.documents ?? []).some((document) => document.document.type === "RESUME");
+  if (application.jobDescription && application.documents && !hasResume) {
     return "Attach resume version";
   }
 

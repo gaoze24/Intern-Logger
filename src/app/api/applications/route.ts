@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { createApplication, getApplications } from "@/lib/services/applications";
+import { createApplication, getApplicationsList } from "@/lib/services/applications";
 import { apiError, parseJsonBody } from "@/lib/http";
 
 export async function GET(request: Request) {
@@ -12,10 +12,14 @@ export async function GET(request: Request) {
   const search = searchParams.get("search") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const includeArchived = searchParams.get("includeArchived") === "true";
-  const apps = await getApplications(session.user.id, {
+  const page = Number(searchParams.get("page") ?? "1");
+  const pageSize = Number(searchParams.get("pageSize") ?? "25");
+  const apps = await getApplicationsList(session.user.id, {
     search,
     includeArchived,
     statuses: status ? [status as never] : undefined,
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    pageSize: [25, 50, 100].includes(pageSize) ? pageSize : 25,
   });
 
   return NextResponse.json({ data: apps });

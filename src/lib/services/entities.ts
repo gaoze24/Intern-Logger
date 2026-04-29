@@ -1,4 +1,4 @@
-import { ActivityEntityType } from "@prisma/client";
+import { ActivityEntityType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   contactSchema,
@@ -8,6 +8,53 @@ import {
   timelineEventSchema,
 } from "@/lib/validations/entities";
 import { createActivityLog, createTimelineEvent } from "@/lib/services/activity";
+
+export type PaginatedResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+type PaginationOptions = {
+  page?: number;
+  pageSize?: number;
+};
+
+const taskListInclude = {
+  application: { select: { companyName: true, roleTitle: true } },
+} satisfies Prisma.TaskInclude;
+
+const contactListInclude = {
+  applications: {
+    include: {
+      application: {
+        select: { id: true, companyName: true, roleTitle: true },
+      },
+    },
+  },
+} satisfies Prisma.ContactInclude;
+
+const documentListInclude = {
+  applications: {
+    include: {
+      application: {
+        select: { id: true, companyName: true, roleTitle: true },
+      },
+    },
+  },
+} satisfies Prisma.DocumentInclude;
+
+export type TaskListItem = Prisma.TaskGetPayload<{ include: typeof taskListInclude }>;
+export type ContactListItem = Prisma.ContactGetPayload<{ include: typeof contactListInclude }>;
+export type DocumentListItem = Prisma.DocumentGetPayload<{ include: typeof documentListInclude }>;
+
+function normalizePagination(options: PaginationOptions = {}) {
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 25));
+  return { page, pageSize, skip: (page - 1) * pageSize };
+}
 
 export async function createInterview(userId: string, input: unknown) {
   const parsed = interviewSchema.parse(input);
@@ -132,28 +179,49 @@ export async function deleteTask(userId: string, id: string) {
   return { id };
 }
 
-export async function getTasks(userId: string) {
-  return db.task.findMany({
-    where: { userId },
-    orderBy: [{ completed: "asc" }, { dueDate: "asc" }],
-    include: { application: { select: { companyName: true, roleTitle: true } } },
-  });
+export async function getTasks(userId: string, options: PaginationOptions = {}): Promise<PaginatedResult<TaskListItem>> {
+  const { page, pageSize, skip } = normalizePagination(options);
+  const where = { userId };
+  const [total, items] = await Promise.all([
+    db.task.count({ where }),
+    db.task.findMany({
+      where,
+      orderBy: [{ completed: "asc" }, { dueDate: "asc" }],
+      include: taskListInclude,
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
-export async function getContacts(userId: string) {
-  return db.contact.findMany({
-    where: { userId },
-    orderBy: [{ followUpDate: "asc" }, { updatedAt: "desc" }],
-    include: {
-      applications: {
-        include: {
-          application: {
-            select: { id: true, companyName: true, roleTitle: true },
-          },
-        },
-      },
-    },
-  });
+export async function getContacts(
+  userId: string,
+  options: PaginationOptions & { search?: string } = {},
+): Promise<PaginatedResult<ContactListItem>> {
+  const { page, pageSize, skip } = normalizePagination(options);
+  const where = {
+    userId,
+    OR: options.search
+      ? [
+          { name: { contains: options.search, mode: "insensitive" as const } },
+          { company: { contains: options.search, mode: "insensitive" as const } },
+          { email: { contains: options.search, mode: "insensitive" as const } },
+        ]
+      : undefined,
+  };
+  const [total, items] = await Promise.all([
+    db.contact.count({ where }),
+    db.contact.findMany({
+      where,
+      orderBy: [{ followUpDate: "asc" }, { updatedAt: "desc" }],
+      include: contactListInclude,
+      skip,
+      take: pageSize,
+    }),
+  ]);
+  return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function createContact(userId: string, input: unknown) {
@@ -208,20 +276,23 @@ export async function deleteDocument(userId: string, id: string) {
   return { id };
 }
 
-export async function getDocuments(userId: string) {
-  return db.document.findMany({
-    where: { userId },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      applications: {
-        include: {
-          application: {
-            select: { id: true, companyName: true, roleTitle: true },
-          },
-        },
-      },
-    },
-  });
+export async function getDocuments(
+  userId: string,
+  options: PaginationOptions = {},
+): Promise<PaginatedResult<DocumentListItem>> {
+  const { page, pageSize, skip } = normalizePagination(options);
+  const where = { userId };
+  const [total, items] = await Promise.all([
+    db.document.count({ where }),
+    db.document.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      include: documentListInclude,
+      skip,
+      take: pageSize,
+    }),
+  ]);
+  return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function linkDocumentToApplication(
