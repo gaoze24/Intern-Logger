@@ -14,7 +14,7 @@ export function PageShell({
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <div className="flex w-full flex-col">
+      <div className="flex min-w-0 w-full flex-col">
         <header className="border-b px-5 py-4 md:px-8 md:py-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -24,7 +24,7 @@ export function PageShell({
             {actions}
           </div>
         </header>
-        <main className="flex-1 px-5 pb-28 pt-5 md:px-8 md:pb-8 md:pt-6">{children}</main>
+        <main className="min-w-0 flex-1 px-5 pb-28 pt-5 md:px-8 md:pb-8 md:pt-6">{children}</main>
       </div>
       <MobileSidebar />
     </div>

@@ -65,6 +65,7 @@ export type KanbanApplicationItem = Prisma.ApplicationGetPayload<{
     id: true;
     companyName: true;
     roleTitle: true;
+    location: true;
     status: true;
     priority: true;
     deadline: true;
@@ -138,6 +139,7 @@ export async function getKanbanApplications(userId: string) {
       id: true,
       companyName: true,
       roleTitle: true,
+      location: true,
       status: true,
       priority: true,
       deadline: true,

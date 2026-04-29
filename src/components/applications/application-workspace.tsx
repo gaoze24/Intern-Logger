@@ -229,7 +229,7 @@ function AddInterviewDialog({ applicationId }: { applicationId: string }) {
     <InterviewDialog
       applicationId={applicationId}
       trigger={
-        <Button>
+        <Button size="sm">
           <Plus className="size-4" />
           Add Interview
         </Button>
@@ -488,7 +488,7 @@ function LinkContactDialog({
     <FormDialog
       title="Link existing contact"
       description="Attach a saved contact to this application profile."
-      trigger={<Button variant="outline">Link Existing Contact</Button>}
+      trigger={<Button variant="outline" size="sm">Link Existing Contact</Button>}
       onSubmit={async (formData) => {
         await linkContactToApplicationAction(
           applicationId,
@@ -582,7 +582,7 @@ function LinkDocumentDialog({
     <FormDialog
       title="Link existing document"
       description="Attach a saved document to this application profile."
-      trigger={<Button variant="outline">Link Existing Document</Button>}
+      trigger={<Button variant="outline" size="sm">Link Existing Document</Button>}
       onSubmit={async (formData) => {
         await linkDocumentToApplicationAction(
           applicationId,
@@ -623,7 +623,7 @@ function TimelineDialog({ applicationId }: { applicationId: string }) {
       title="Add timeline note"
       description="Capture a manual event such as a follow-up email, recruiter reply, or coffee chat."
       trigger={
-        <Button>
+        <Button size="sm">
           <Plus className="size-4" />
           Add Timeline Note
         </Button>
@@ -697,7 +697,7 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
     <TaskDialog
       applicationId={application.id}
       trigger={
-        <Button>
+        <Button variant="outline" size="sm">
           <Plus className="size-4" />
           Add Task
         </Button>
@@ -707,7 +707,7 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
 
   const createContactButton = (
     <ContactDialog
-      trigger={<Button>Create Contact</Button>}
+      trigger={<Button variant="outline" size="sm">Create Contact</Button>}
       onSave={async (data) => {
         const contact = await createContactAction(data);
         await linkContactToApplicationAction(application.id, contact.id, String(data.relationshipType ?? ""));
@@ -717,7 +717,7 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
 
   const addDocumentButton = (
     <DocumentDialog
-      trigger={<Button>Add Document</Button>}
+      trigger={<Button variant="outline" size="sm">Add Document</Button>}
       onSave={async (data) => {
         const document = await createDocumentAction(data);
         await linkDocumentToApplicationAction(application.id, document.id, undefined, undefined);
@@ -729,13 +729,13 @@ export function ApplicationWorkspace({ application, contacts, documents }: Works
     <div className="space-y-5">
       <Card className="shadow-sm">
         <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-xl">{application.companyName}</CardTitle>
               <CardDescription>{application.roleTitle}</CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setTab("edit")}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTab("edit")}>
                 Edit Application
               </Button>
               <StatusBadge status={application.status} />

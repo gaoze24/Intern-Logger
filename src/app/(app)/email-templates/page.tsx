@@ -85,6 +85,7 @@ export default function EmailTemplatesPage() {
             <h3 className="text-lg font-semibold tracking-tight">Preview</h3>
             <Button
               variant="outline"
+              size="sm"
               onClick={async () => {
                 await navigator.clipboard.writeText(body);
                 toast.success("Copied to clipboard");
