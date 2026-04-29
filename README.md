@@ -120,6 +120,21 @@ After seeding:
 - `npm run db:generate` – Prisma client generation
 - `npm run db:migrate` – Prisma migration
 - `npm run db:seed` – seed sample dataset
+- `npm run vercel-build` – Vercel-safe build (`prisma generate && prisma db push && next build`)
+
+## Vercel Deployment (Neon-friendly)
+
+Use this when you only have Neon pooled connection access.
+
+1. In Vercel project env vars, set:
+   - `DATABASE_URL` (Neon pooled URL)
+   - `NEXTAUTH_URL`
+   - `NEXTAUTH_SECRET`
+2. Build command in Vercel:
+   - `npm run vercel-build`
+3. Redeploy with **Clear build cache** if previous builds failed.
+
+This project intentionally uses `prisma db push` in Vercel build to ensure tables are created even when direct migration connection is unavailable.
 
 ## API Surface (MVP)
 
