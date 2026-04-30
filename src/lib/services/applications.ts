@@ -358,6 +358,12 @@ export async function getApplicationById(userId: string, id: string) {
 
 export async function createApplication(userId: string, input: unknown) {
   const parsed = applicationSchema.parse(input);
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (!user) throw appError("UNAUTHORIZED", "Please sign in to continue.", { status: 401 });
+
   const existing = (await db.application.findMany({
     where: { userId, deletedAt: null },
     select: {

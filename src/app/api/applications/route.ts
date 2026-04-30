@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { ApplicationStatusType } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
 import {
   createApplication,
   getApplicationsList,
@@ -9,10 +7,11 @@ import {
   normalizeApplicationTab,
 } from "@/lib/services/applications";
 import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
+import { getVerifiedSessionUserId } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return unauthorizedResponse();
+  const userId = await getVerifiedSessionUserId();
+  if (!userId) return unauthorizedResponse();
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
@@ -26,7 +25,7 @@ export async function GET(request: Request) {
   const { sort, order } = normalizeApplicationSort(searchParams.get("sort") ?? undefined, searchParams.get("order") ?? undefined);
   const page = Number(searchParams.get("page") ?? "1");
   const pageSize = Number(searchParams.get("pageSize") ?? "25");
-  const apps = await getApplicationsList(session.user.id, {
+  const apps = await getApplicationsList(userId, {
     search,
     tab,
     statuses: status ? [status] : undefined,
@@ -40,11 +39,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return unauthorizedResponse();
+  const userId = await getVerifiedSessionUserId();
+  if (!userId) return unauthorizedResponse();
   try {
     const payload = await parseJsonBody(request);
-    const result = await createApplication(session.user.id, payload);
+    const result = await createApplication(userId, payload);
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
     return apiError(error);

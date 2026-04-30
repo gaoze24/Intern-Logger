@@ -4,6 +4,9 @@ import type { ApplicationStatusType } from "@prisma/client";
 vi.mock("@/lib/db", () => {
   return {
     db: {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ id: "u1" }),
+      },
       application: {
         findMany: vi.fn().mockResolvedValue([]),
         create: vi.fn().mockResolvedValue({

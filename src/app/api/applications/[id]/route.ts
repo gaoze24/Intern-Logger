@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import {
   archiveApplication,
   deleteApplication,
@@ -9,12 +7,13 @@ import {
   updateApplication,
 } from "@/lib/services/applications";
 import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
+import { getVerifiedSessionUserId } from "@/lib/auth-helpers";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return unauthorizedResponse();
+  const userId = await getVerifiedSessionUserId();
+  if (!userId) return unauthorizedResponse();
   const { id } = await params;
-  const data = await getApplicationById(session.user.id, id);
+  const data = await getApplicationById(userId, id);
   if (!data) {
     return NextResponse.json(
       { ok: false, code: "NOT_FOUND", message: "This application no longer exists." },
@@ -25,20 +24,20 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return unauthorizedResponse();
+  const userId = await getVerifiedSessionUserId();
+  if (!userId) return unauthorizedResponse();
   try {
     const { id } = await params;
     const payload = await parseJsonBody(request);
     if ((payload as { archive?: boolean }).archive) {
-      const data = await archiveApplication(session.user.id, id);
+      const data = await archiveApplication(userId, id);
       return NextResponse.json({ data });
     }
     if ((payload as { restore?: boolean }).restore) {
-      const data = await restoreApplication(session.user.id, id);
+      const data = await restoreApplication(userId, id);
       return NextResponse.json({ data });
     }
-    const data = await updateApplication(session.user.id, id, payload);
+    const data = await updateApplication(userId, id, payload);
     return NextResponse.json({ data });
   } catch (error) {
     return apiError(error);
@@ -46,11 +45,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return unauthorizedResponse();
+  const userId = await getVerifiedSessionUserId();
+  if (!userId) return unauthorizedResponse();
   try {
     const { id } = await params;
-    const data = await deleteApplication(session.user.id, id);
+    const data = await deleteApplication(userId, id);
     return NextResponse.json({ data });
   } catch (error) {
     return apiError(error);
