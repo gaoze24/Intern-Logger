@@ -5,6 +5,7 @@ import {
   archiveApplication,
   deleteApplication,
   getApplicationById,
+  restoreApplication,
   updateApplication,
 } from "@/lib/services/applications";
 import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
@@ -31,6 +32,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const payload = await parseJsonBody(request);
     if ((payload as { archive?: boolean }).archive) {
       const data = await archiveApplication(session.user.id, id);
+      return NextResponse.json({ data });
+    }
+    if ((payload as { restore?: boolean }).restore) {
+      const data = await restoreApplication(session.user.id, id);
       return NextResponse.json({ data });
     }
     const data = await updateApplication(session.user.id, id, payload);

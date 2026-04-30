@@ -6,9 +6,21 @@ import { getApplicationById } from "@/lib/services/applications";
 import { getContacts, getDocuments } from "@/lib/services/entities";
 import { ExportDialog } from "@/components/common/export-dialog";
 
-export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function getInitialTab(searchParams: Record<string, string | string[] | undefined>) {
+  const tab = searchParams.tab;
+  return typeof tab === "string" && tab === "edit" ? tab : "overview";
+}
+
+export default async function ApplicationDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const userId = await getCurrentUserIdOrRedirect();
   const { id } = await params;
+  const initialTab = getInitialTab(await searchParams);
   const [application, contacts, documents] = await Promise.all([
     getApplicationById(userId, id),
     getContacts(userId, { pageSize: 100 }),
@@ -26,6 +38,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         application={application}
         contacts={contacts.items}
         documents={documents.items}
+        initialTab={initialTab}
       />
     </PageShell>
   );

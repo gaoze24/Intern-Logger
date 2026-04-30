@@ -97,6 +97,7 @@ type WorkspaceProps = {
   application: ApplicationDetail;
   contacts: ContactListItem[];
   documents: DocumentListItem[];
+  initialTab?: string;
 };
 
 type DialogFormProps = {
@@ -719,8 +720,8 @@ function runMutation(action: () => Promise<unknown>, success: string) {
   };
 }
 
-export function ApplicationWorkspace({ application, contacts, documents }: WorkspaceProps) {
-  const [tab, setTab] = useState("overview");
+export function ApplicationWorkspace({ application, contacts, documents, initialTab = "overview" }: WorkspaceProps) {
+  const [tab, setTab] = useState(initialTab);
   const [pending, startTransition] = useTransition();
   const upcomingInterview = application.interviews
     .filter((interview) => interview.scheduledAt >= new Date())

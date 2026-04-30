@@ -1,5 +1,6 @@
-import { Plus } from "lucide-react";
+import { Archive, BriefcaseBusiness, Plus, SearchX } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ApplicationStatusType } from "@prisma/client";
 import { PageShell } from "@/components/layout/page-shell";
 import { ApplicationsFilterBar } from "@/components/applications/filter-bar";
@@ -7,9 +8,13 @@ import { ApplicationTable } from "@/components/applications/application-table";
 import { ApplicationCard } from "@/components/applications/application-card";
 import { EmptyState } from "@/components/common/empty-state";
 import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
-import { getApplicationsList } from "@/lib/services/applications";
+import {
+  getApplicationCounts,
+  getApplicationsList,
+  normalizeApplicationSort,
+  normalizeApplicationTab,
+} from "@/lib/services/applications";
 import { buttonVariants } from "@/components/ui/button";
-import { BriefcaseBusiness } from "lucide-react";
 import { PaginationControls } from "@/components/common/pagination-controls";
 
 const VALID_PAGE_SIZES = new Set([25, 50, 100]);
@@ -44,17 +49,78 @@ export default async function ApplicationsPage({
   const params = await searchParams;
   const viewParam = getStringParam(params, "view");
   const view = viewParam === "compact" || viewParam === "kanban" ? viewParam : "table";
-  const status = getStatusParam(getStringParam(params, "status"));
+  if (view === "kanban") redirect("/kanban");
+  const tab = normalizeApplicationTab(getStringParam(params, "tab"));
+  const statusParam = getStatusParam(getStringParam(params, "status"));
+  const status = tab === "active" && statusParam === ApplicationStatusType.ARCHIVED ? undefined : statusParam;
   const search = getStringParam(params, "search");
+  const { sort, order } = normalizeApplicationSort(getStringParam(params, "sort"), getStringParam(params, "order"));
   const page = getPageParam(getStringParam(params, "page"));
   const pageSize = getPageSizeParam(getStringParam(params, "pageSize"));
+  const statuses = status ? [status] : undefined;
 
-  const applications = await getApplicationsList(userId, {
+  const [applications, counts] = await Promise.all([
+    getApplicationsList(userId, {
+      tab,
+      search,
+      statuses,
+      sort,
+      order,
+      page,
+      pageSize,
+    }),
+    getApplicationCounts(userId, {
+      search,
+      statuses,
+    }),
+  ]);
+
+  const hasFilters = Boolean(search || status);
+  const emptyState =
+    applications.items.length === 0 && hasFilters
+      ? {
+          title: "No matching applications",
+          description: "Try changing your search, filters, or archived view.",
+          icon: SearchX,
+          action: (
+            <Link href={`/applications?tab=${tab}`} className={`${buttonVariants({ variant: "outline" })} mt-2`}>
+              Clear filters
+            </Link>
+          ),
+        }
+      : applications.items.length === 0 && tab === "archived"
+        ? {
+            title: "No archived applications",
+            description: "Archived applications will appear here when you hide them from your active list.",
+            icon: Archive,
+            action: (
+              <Link href="/applications?tab=active" className={`${buttonVariants({ variant: "outline" })} mt-2`}>
+                Back to Active
+              </Link>
+            ),
+          }
+        : applications.items.length === 0
+          ? {
+              title: "No active applications",
+              description: "Add an internship application to start tracking your recruiting pipeline.",
+              icon: BriefcaseBusiness,
+              action: (
+                <Link href="/applications/new" className={`${buttonVariants()} mt-2`}>
+                  <Plus className="mr-1 size-4" />
+                  Add application
+                </Link>
+              ),
+            }
+          : null;
+
+  const paginationParams = {
+    tab,
     search,
-    statuses: status ? [status] : undefined,
-    page,
-    pageSize,
-  });
+    status,
+    sort,
+    order,
+    view,
+  };
 
   return (
     <PageShell
@@ -68,22 +134,19 @@ export default async function ApplicationsPage({
       }
     >
       <div className="space-y-5">
-        <ApplicationsFilterBar />
-        {applications.items.length === 0 ? (
+        <ApplicationsFilterBar tab={tab} counts={counts} sort={sort} order={order} />
+        {emptyState ? (
           <EmptyState
-            title="No applications yet"
-            description="Add your first internship application to start tracking deadlines, interviews, and tasks."
-            icon={BriefcaseBusiness}
-            action={
-              <Link href="/applications/new" className={`${buttonVariants()} mt-2`}>
-                <Plus className="mr-1 size-4" />
-                Add application
-              </Link>
-            }
+            title={emptyState.title}
+            description={emptyState.description}
+            icon={emptyState.icon}
+            action={emptyState.action}
           />
         ) : null}
 
-        {view === "table" && applications.items.length > 0 ? <ApplicationTable applications={applications.items} /> : null}
+        {view === "table" && applications.items.length > 0 ? (
+          <ApplicationTable applications={applications.items} showArchivedAt={tab !== "active"} />
+        ) : null}
         {view === "compact" && applications.items.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {applications.items.map((application) => (
@@ -91,16 +154,13 @@ export default async function ApplicationsPage({
               ))}
             </div>
           ) : null}
-        {view === "kanban" && applications.items.length > 0 ? (
-          <div className="text-[15px] text-muted-foreground">Use the dedicated Kanban page for drag-and-drop workflow.</div>
-        ) : null}
         <PaginationControls
           basePath="/applications"
           page={applications.page}
           pageSize={applications.pageSize}
           total={applications.total}
           totalPages={applications.totalPages}
-          params={{ search, status, view }}
+          params={paginationParams}
         />
       </div>
     </PageShell>
