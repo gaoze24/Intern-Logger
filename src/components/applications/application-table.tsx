@@ -38,6 +38,12 @@ import { DeadlineBadge } from "@/components/applications/deadline-badge";
 import { formatDate } from "@/lib/utils/date";
 import { suggestNextAction } from "@/lib/utils/next-action";
 import {
+  getApplicationPrimaryTitle,
+  getApplicationSecondaryTitle,
+  getModeLabels,
+  type ApplicationMode,
+} from "@/constants/app";
+import {
   archiveApplicationAction,
   deleteApplicationAction,
   restoreApplicationAction,
@@ -46,6 +52,7 @@ import { cn } from "@/lib/utils";
 
 type ApplicationTableProps = {
   applications: ApplicationListItem[];
+  mode: ApplicationMode;
   showArchivedAt?: boolean;
 };
 
@@ -57,21 +64,22 @@ type ConfirmAction = {
   run: () => Promise<{ ok: boolean; message?: string }>;
 };
 
-export function ApplicationTable({ applications, showArchivedAt }: ApplicationTableProps) {
+export function ApplicationTable({ applications, mode, showArchivedAt }: ApplicationTableProps) {
   const router = useRouter();
+  const labels = getModeLabels(mode);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Location</TableHead>
+            <TableHead>{labels.primaryField}</TableHead>
+            <TableHead>{labels.secondaryField}</TableHead>
+            <TableHead>{mode === "UNIVERSITY" ? "Country" : "Location"}</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Priority</TableHead>
             <TableHead>Deadline</TableHead>
-            <TableHead>Applied</TableHead>
+            <TableHead>{labels.submittedField}</TableHead>
             <TableHead>Next Action</TableHead>
             {showArchivedAt ? <TableHead>Archived At</TableHead> : null}
             <TableHead>Last Updated</TableHead>
@@ -94,11 +102,11 @@ export function ApplicationTable({ applications, showArchivedAt }: ApplicationTa
                   className="font-medium text-foreground hover:underline"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  {app.companyName}
+                  {getApplicationPrimaryTitle(app)}
                 </Link>
               </TableCell>
-              <TableCell>{app.roleTitle}</TableCell>
-              <TableCell>{app.location ?? "—"}</TableCell>
+              <TableCell>{getApplicationSecondaryTitle(app)}</TableCell>
+              <TableCell>{mode === "UNIVERSITY" ? app.country ?? "—" : app.location ?? "—"}</TableCell>
               <TableCell>
                 <StatusBadge status={app.status} />
               </TableCell>
@@ -173,7 +181,7 @@ function ApplicationRowActions({ application }: { application: ApplicationListIt
         <DropdownMenuTrigger
           render={
             <Button
-              aria-label={`Actions for ${application.companyName}`}
+              aria-label={`Actions for ${getApplicationPrimaryTitle(application)}`}
               variant="ghost"
               size="iconSm"
               disabled={isPending}

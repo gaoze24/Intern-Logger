@@ -26,7 +26,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Production-grade internship application tracker",
+  description: "Track jobs, internships, and university applications",
 };
 
 export default function RootLayout({

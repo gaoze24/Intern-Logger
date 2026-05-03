@@ -2,6 +2,8 @@ import { PageShell } from "@/components/layout/page-shell";
 import { ContactList } from "@/components/contacts/contact-list";
 import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
 import { getContacts } from "@/lib/services/entities";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
+import { getModeLabels } from "@/constants/app";
 import { PaginationControls } from "@/components/common/pagination-controls";
 import { SearchParamInput } from "@/components/common/search-param-input";
 
@@ -28,18 +30,21 @@ export default async function ContactsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const userId = await getCurrentUserIdOrRedirect();
+  const mode = await getCurrentApplicationMode(userId);
+  const labels = getModeLabels(mode);
   const params = await searchParams;
   const search = getParam(params, "search");
   const contacts = await getContacts(userId, {
+    applicationType: mode,
     search,
     page: getPage(getParam(params, "page")),
     pageSize: getPageSize(getParam(params, "pageSize")),
   });
 
   return (
-    <PageShell title="Contacts / Networking" description="Track recruiters, alumni, referrals, and interviewers">
+    <PageShell title="Contacts / Networking" description={`Track contacts for your ${labels.modeLabel.toLowerCase()}`}>
       <div className="space-y-5">
-        <SearchParamInput placeholder="Search contacts, companies, emails..." />
+        <SearchParamInput placeholder={mode === "UNIVERSITY" ? "Search contacts, institutions, emails..." : "Search contacts, companies, emails..."} />
         <ContactList contacts={contacts.items} />
         <PaginationControls
           basePath="/contacts"

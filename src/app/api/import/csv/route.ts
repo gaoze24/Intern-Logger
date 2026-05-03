@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { ApplicationType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { parseApplicationsCsv } from "@/lib/csv/applications";
 import { db } from "@/lib/db";
@@ -61,6 +62,15 @@ export async function POST(req: Request) {
   const report = [];
   let imported = 0;
   for (const [index, row] of parsed.rows.entries()) {
+    const applicationType = (row.applicationType?.trim().toUpperCase() || "JOB") as ApplicationType;
+    if (applicationType === ApplicationType.UNIVERSITY) {
+      report.push({
+        row: rowNumber(index),
+        status: "skipped",
+        reason: "University CSV import is not available yet.",
+      });
+      continue;
+    }
     const companyName = row.companyName?.trim() ?? "";
     const roleTitle = row.roleTitle?.trim() ?? "";
     const errors = [];
@@ -90,6 +100,7 @@ export async function POST(req: Request) {
     await db.application.create({
       data: {
         userId: session.user.id,
+        applicationType: ApplicationType.JOB,
         companyName,
         roleTitle,
         department: row.department ?? null,
@@ -97,6 +108,16 @@ export async function POST(req: Request) {
         country: row.country ?? null,
         notes: row.notes ?? null,
         jobDescription: row.jobDescription ?? null,
+        jobDetail: {
+          create: {
+            companyName,
+            roleTitle,
+            department: row.department ?? null,
+            jobPostingUrl: row.jobPostingUrl ?? null,
+            applicationUrl: row.applicationUrl ?? null,
+            jobDescription: row.jobDescription ?? null,
+          },
+        },
       },
     });
     imported += 1;

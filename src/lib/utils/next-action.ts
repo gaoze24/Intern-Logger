@@ -16,6 +16,14 @@ export function suggestNextAction(application: NextActionApplication): string {
     return "Send follow-up to recruiter";
   }
 
+  if (application.status === ApplicationStatusType.SUBMITTED && isBefore(application.updatedAt, addDays(now, -21))) {
+    return "Check admissions portal for updates";
+  }
+
+  if (application.status === ApplicationStatusType.DOCUMENTS_PENDING) {
+    return "Complete required documents";
+  }
+
   const upcomingInterview = (application.interviews ?? [])
     .filter((interview) => interview.scheduledAt > now)
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
@@ -25,6 +33,10 @@ export function suggestNextAction(application: NextActionApplication): string {
 
   if (application.status === ApplicationStatusType.OFFER && application.deadline) {
     return "Review offer before deadline";
+  }
+
+  if (application.status === ApplicationStatusType.ACCEPTED && application.deadline) {
+    return "Review admission offer before deadline";
   }
 
   const hasResume = (application.documents ?? []).some((document) => document.document.type === "RESUME");

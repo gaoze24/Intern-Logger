@@ -1,42 +1,102 @@
 import { z } from "zod";
 import {
   ApplicationStatusType,
+  ApplicationType,
+  DegreeLevel,
+  IntakeTerm,
   InternshipSeason,
   Priority,
   Source,
   WorkMode,
 } from "@prisma/client";
+import { isStatusAllowedForMode } from "@/constants/app";
 
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
+const optionalString = z.preprocess(emptyToUndefined, z.string().trim().optional());
 const optionalDate = z.preprocess(emptyToUndefined, z.coerce.date("Enter a valid date.").optional().nullable());
 const optionalUrl = (message: string) =>
   z.preprocess(emptyToUndefined, z.string().trim().url(message).optional().or(z.literal("")));
+const optionalYear = z.preprocess(
+  emptyToUndefined,
+  z.coerce
+    .number("Enter a valid year.")
+    .int("Enter a whole year.")
+    .min(2000, "Year must be 2000 or later.")
+    .max(2100, "Year must be 2100 or earlier.")
+    .optional()
+    .nullable(),
+);
 
-export const applicationSchema = z.object({
-  companyName: z.string().trim().min(1, "Company name is required.").max(120, "Company name is too long."),
-  roleTitle: z.string().trim().min(1, "Role title is required.").max(160, "Role title is too long."),
-  status: z.nativeEnum(ApplicationStatusType).default(ApplicationStatusType.WISHLIST),
-  department: z.string().optional(),
-  location: z.string().optional(),
-  country: z.string().optional(),
-  workMode: z.nativeEnum(WorkMode).default(WorkMode.UNKNOWN),
-  priority: z.nativeEnum(Priority).default(Priority.MEDIUM),
-  source: z.nativeEnum(Source).default(Source.OTHER),
-  applicationUrl: optionalUrl("Enter a valid application URL."),
-  jobPostingUrl: optionalUrl("Enter a valid job posting URL."),
-  deadline: optionalDate,
-  appliedDate: optionalDate,
-  discoveredDate: optionalDate,
-  season: z.nativeEnum(InternshipSeason).optional().nullable(),
-  applicationYear: z.number().int().min(2000).max(2100).optional().nullable(),
-  compensation: z.string().optional(),
-  visaSponsorship: z.boolean().optional().nullable(),
-  referralUsed: z.boolean().default(false),
-  jobDescription: z.string().optional(),
-  notes: z.string().optional(),
-  archived: z.boolean().default(false),
-  tagIds: z.array(z.string()).default([]),
-});
+export const applicationSchema = z
+  .object({
+    applicationType: z.nativeEnum(ApplicationType).default(ApplicationType.JOB),
+    companyName: z.string().trim().optional().default(""),
+    roleTitle: z.string().trim().optional().default(""),
+    institutionName: z.string().trim().optional().default(""),
+    programName: z.string().trim().optional().default(""),
+    status: z.nativeEnum(ApplicationStatusType).default(ApplicationStatusType.WISHLIST),
+    department: optionalString,
+    facultyOrDepartment: optionalString,
+    location: optionalString,
+    country: optionalString,
+    campus: optionalString,
+    workMode: z.nativeEnum(WorkMode).default(WorkMode.UNKNOWN),
+    priority: z.nativeEnum(Priority).default(Priority.MEDIUM),
+    source: z.nativeEnum(Source).default(Source.OTHER),
+    applicationUrl: optionalUrl("Enter a valid application URL."),
+    jobPostingUrl: optionalUrl("Enter a valid job posting URL."),
+    programUrl: optionalUrl("Enter a valid program URL."),
+    applicationPortalUrl: optionalUrl("Enter a valid application portal URL."),
+    deadline: optionalDate,
+    appliedDate: optionalDate,
+    submittedDate: optionalDate,
+    discoveredDate: optionalDate,
+    season: z.nativeEnum(InternshipSeason).optional().nullable(),
+    applicationYear: optionalYear,
+    applicationRound: optionalString,
+    intakeTerm: z.nativeEnum(IntakeTerm).optional().nullable(),
+    intakeYear: optionalYear,
+    degreeLevel: z.nativeEnum(DegreeLevel).optional().nullable(),
+    compensation: optionalString,
+    tuitionEstimate: optionalString,
+    fundingStatus: optionalString,
+    testRequirementStatus: optionalString,
+    recommendationRequirementStatus: optionalString,
+    visaSponsorship: z.boolean().optional().nullable(),
+    referralUsed: z.boolean().default(false),
+    scholarshipApplied: z.boolean().default(false),
+    jobDescription: optionalString,
+    statementPrompt: optionalString,
+    notes: optionalString,
+    archived: z.boolean().default(false),
+    tagIds: z.array(z.string()).default([]),
+  })
+  .superRefine((data, ctx) => {
+    if (!isStatusAllowedForMode(data.status, data.applicationType)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "Choose a status that belongs to the selected application mode.",
+      });
+    }
+
+    if (data.applicationType === ApplicationType.UNIVERSITY) {
+      if (!data.institutionName.trim()) {
+        ctx.addIssue({ code: "custom", path: ["institutionName"], message: "Institution name is required." });
+      }
+      if (!data.programName.trim()) {
+        ctx.addIssue({ code: "custom", path: ["programName"], message: "Program name is required." });
+      }
+      return;
+    }
+
+    if (!data.companyName.trim()) {
+      ctx.addIssue({ code: "custom", path: ["companyName"], message: "Company name is required." });
+    }
+    if (!data.roleTitle.trim()) {
+      ctx.addIssue({ code: "custom", path: ["roleTitle"], message: "Role title is required." });
+    }
+  });
 
 export const applicationFiltersSchema = z.object({
   search: z.string().optional(),

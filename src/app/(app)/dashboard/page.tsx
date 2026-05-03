@@ -5,29 +5,33 @@ import { PageShell } from "@/components/layout/page-shell";
 import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { getDashboardStats, getUpcomingEvents } from "@/lib/services/dashboard";
 import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
 import { StatusPieChart, MonthlyBarChart } from "@/components/analytics/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils/date";
+import { getApplicationPrimaryTitle, getModeLabels } from "@/constants/app";
 
 export default async function DashboardPage() {
   const userId = await getCurrentUserIdOrRedirect();
-  const [stats, upcoming] = await Promise.all([getDashboardStats(userId), getUpcomingEvents(userId)]);
+  const mode = await getCurrentApplicationMode(userId);
+  const labels = getModeLabels(mode);
+  const [stats, upcoming] = await Promise.all([getDashboardStats(userId, mode), getUpcomingEvents(userId, mode)]);
 
   return (
     <PageShell
       title="Dashboard"
-      description="Overview of your internship application pipeline"
+      description={labels.dashboardDescription}
       actions={
         <div className="flex items-center gap-2">
           <Link href="/applications/new" className={buttonVariants()}>
             <Plus className="mr-1 size-4" />
-            Add Application
+            {labels.add}
           </Link>
         </div>
       }
     >
       <div className="space-y-5">
-        <StatsGrid stats={stats} />
+        <StatsGrid stats={stats} mode={mode} />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <StatusPieChart data={stats.statusCounts} />
@@ -42,7 +46,7 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3 px-6 pb-6">
               {upcoming.deadlines.slice(0, 6).map((deadline) => (
                 <div key={deadline.id} className="flex items-center justify-between gap-2">
-                  <span className="truncate">{deadline.companyName}</span>
+                  <span className="truncate">{getApplicationPrimaryTitle(deadline)}</span>
                   <span className="text-muted-foreground">{formatDate(deadline.deadline)}</span>
                 </div>
               ))}
@@ -56,7 +60,7 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3 px-6 pb-6">
               {upcoming.interviews.slice(0, 6).map((interview) => (
                 <div key={interview.id} className="flex items-center justify-between gap-2">
-                  <span className="truncate">{interview.application.companyName}</span>
+                  <span className="truncate">{getApplicationPrimaryTitle(interview.application)}</span>
                   <span className="text-muted-foreground">{formatDate(interview.scheduledAt)}</span>
                 </div>
               ))}

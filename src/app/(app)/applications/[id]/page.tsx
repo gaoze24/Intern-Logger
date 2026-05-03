@@ -5,6 +5,7 @@ import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
 import { getApplicationById } from "@/lib/services/applications";
 import { getContacts, getDocuments } from "@/lib/services/entities";
 import { ExportDialog } from "@/components/common/export-dialog";
+import { getApplicationDisplayName, getModeLabels } from "@/constants/app";
 
 function getInitialTab(searchParams: Record<string, string | string[] | undefined>) {
   const tab = searchParams.tab;
@@ -21,17 +22,18 @@ export default async function ApplicationDetailPage({
   const userId = await getCurrentUserIdOrRedirect();
   const { id } = await params;
   const initialTab = getInitialTab(await searchParams);
-  const [application, contacts, documents] = await Promise.all([
-    getApplicationById(userId, id),
-    getContacts(userId, { pageSize: 100 }),
-    getDocuments(userId, { pageSize: 100 }),
-  ]);
+  const application = await getApplicationById(userId, id);
   if (!application) notFound();
+  const [contacts, documents] = await Promise.all([
+    getContacts(userId, { applicationType: application.applicationType, pageSize: 100 }),
+    getDocuments(userId, { applicationType: application.applicationType, pageSize: 100 }),
+  ]);
+  const labels = getModeLabels(application.applicationType);
 
   return (
     <PageShell
-      title={`${application.companyName} · ${application.roleTitle}`}
-      description="Full application profile"
+      title={getApplicationDisplayName(application)}
+      description={`${labels.single} profile`}
       actions={<ExportDialog />}
     >
       <ApplicationWorkspace

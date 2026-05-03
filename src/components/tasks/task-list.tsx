@@ -4,6 +4,7 @@ import { completeTaskAction } from "@/actions/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getApplicationDisplayName } from "@/constants/app";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "sonner";
 
@@ -14,7 +15,7 @@ type TaskItem = {
   dueDate: Date | null;
   completed: boolean;
   priority: string;
-  application: { companyName: string; roleTitle: string } | null;
+  application: Parameters<typeof getApplicationDisplayName>[0] | null;
 };
 
 export function TaskList({ tasks }: { tasks: TaskItem[] }) {
@@ -40,7 +41,9 @@ export function TaskList({ tasks }: { tasks: TaskItem[] }) {
                 />
                 <div>
                   <CardTitle>{task.title}</CardTitle>
-                  <CardDescription className="text-[15px]">{task.application ? `${task.application.companyName} · ${task.application.roleTitle}` : "General task"}</CardDescription>
+                  <CardDescription className="text-[15px]">
+                    {task.application ? getApplicationDisplayName(task.application) : "General task"}
+                  </CardDescription>
                 </div>
               </div>
               <Button variant="outline" size="sm" disabled={task.completed}>

@@ -1,6 +1,7 @@
 import {
   ActivityEntityType,
   ApplicationStatusType,
+  ApplicationType,
   Prisma,
   type Priority,
   type InternshipSeason,
@@ -11,10 +12,12 @@ import { db } from "@/lib/db";
 import { applicationSchema } from "@/lib/validations/application";
 import { detectDuplicates } from "@/lib/utils/duplicate";
 import { createActivityLog, createTimelineEvent } from "@/lib/services/activity";
-import { STATUS_LABELS } from "@/constants/app";
+import { isStatusAllowedForMode, STATUS_LABELS } from "@/constants/app";
 import { appError } from "@/lib/errors";
 
 const applicationInclude = {
+  jobDetail: true,
+  universityDetail: true,
   interviews: true,
   tasks: true,
   timelineEvents: { orderBy: { occurredAt: "desc" as const } },
@@ -36,6 +39,7 @@ type DuplicateComparableApplication = {
 };
 
 export type ApplicationFilters = {
+  applicationType?: ApplicationType;
   includeArchived?: boolean;
   tab?: ApplicationListTab;
   search?: string;
@@ -87,9 +91,24 @@ export function normalizeApplicationSort(
 
 const applicationListSelect = {
   id: true,
+  applicationType: true,
   companyName: true,
   roleTitle: true,
+  jobDetail: {
+    select: {
+      companyName: true,
+      roleTitle: true,
+    },
+  },
+  universityDetail: {
+    select: {
+      institutionName: true,
+      programName: true,
+      degreeLevel: true,
+    },
+  },
   location: true,
+  country: true,
   workMode: true,
   status: true,
   priority: true,
@@ -103,17 +122,31 @@ const applicationListSelect = {
 
 export type ApplicationListItem = Prisma.ApplicationGetPayload<{ select: typeof applicationListSelect }>;
 export type ApplicationDetail = Prisma.ApplicationGetPayload<{ include: typeof applicationInclude }>;
-export type KanbanApplicationItem = Prisma.ApplicationGetPayload<{
-  select: {
-    id: true;
-    companyName: true;
-    roleTitle: true;
-    location: true;
-    status: true;
-    priority: true;
-    deadline: true;
-  };
-}>;
+const kanbanApplicationSelect = {
+  id: true,
+  applicationType: true,
+  companyName: true,
+  roleTitle: true,
+  country: true,
+  jobDetail: {
+    select: {
+      companyName: true,
+      roleTitle: true,
+    },
+  },
+  universityDetail: {
+    select: {
+      institutionName: true,
+      programName: true,
+      degreeLevel: true,
+    },
+  },
+  location: true,
+  status: true,
+  priority: true,
+  deadline: true,
+} satisfies Prisma.ApplicationSelect;
+export type KanbanApplicationItem = Prisma.ApplicationGetPayload<{ select: typeof kanbanApplicationSelect }>;
 export type PaginatedResult<T> = {
   items: T[];
   total: number;
@@ -152,6 +185,9 @@ function buildApplicationWhere(userId: string, filters: ApplicationFilters): Pri
         OR: [
           { companyName: { contains: filters.search, mode: "insensitive" } },
           { roleTitle: { contains: filters.search, mode: "insensitive" } },
+          { universityDetail: { is: { institutionName: { contains: filters.search, mode: "insensitive" } } } },
+          { universityDetail: { is: { programName: { contains: filters.search, mode: "insensitive" } } } },
+          { country: { contains: filters.search, mode: "insensitive" } },
           { notes: { contains: filters.search, mode: "insensitive" } },
           { tags: { some: { tag: { name: { contains: filters.search, mode: "insensitive" } } } } },
           { contacts: { some: { contact: { name: { contains: filters.search, mode: "insensitive" } } } } },
@@ -161,6 +197,7 @@ function buildApplicationWhere(userId: string, filters: ApplicationFilters): Pri
 
   return {
     userId,
+    applicationType: filters.applicationType,
     deletedAt: null,
     status: filters.statuses?.length ? { in: filters.statuses } : undefined,
     priority: filters.priorities?.length ? { in: filters.priorities } : undefined,
@@ -174,6 +211,10 @@ function buildApplicationWhereSql(userId: string, filters: ApplicationFilters) {
     Prisma.sql`a."userId" = ${userId}`,
     Prisma.sql`a."deletedAt" IS NULL`,
   ];
+
+  if (filters.applicationType) {
+    conditions.push(Prisma.sql`a."applicationType"::text = ${filters.applicationType}`);
+  }
 
   if (tab === "active") {
     conditions.push(Prisma.sql`a."archived" = false`);
@@ -195,6 +236,13 @@ function buildApplicationWhereSql(userId: string, filters: ApplicationFilters) {
     conditions.push(Prisma.sql`(
       a."companyName" ILIKE ${search}
       OR a."roleTitle" ILIKE ${search}
+      OR a."country" ILIKE ${search}
+      OR EXISTS (
+        SELECT 1
+        FROM "UniversityApplicationDetail" ud
+        WHERE ud."applicationId" = a."id"
+          AND (ud."institutionName" ILIKE ${search} OR ud."programName" ILIKE ${search})
+      )
       OR a."notes" ILIKE ${search}
       OR EXISTS (
         SELECT 1
@@ -247,17 +295,25 @@ function getApplicationOrderSql(sort: ApplicationSortKey, order: ApplicationSort
   if (sort === "status") {
     return Prisma.sql`CASE a."status"::text
       WHEN 'WISHLIST' THEN 1
+      WHEN 'RESEARCHING' THEN 1
       WHEN 'PREPARING' THEN 2
+      WHEN 'DOCUMENTS_PENDING' THEN 3
       WHEN 'APPLIED' THEN 3
+      WHEN 'SUBMITTED' THEN 4
       WHEN 'ONLINE_ASSESSMENT' THEN 4
+      WHEN 'UNDER_REVIEW' THEN 5
       WHEN 'RECRUITER_SCREEN' THEN 5
       WHEN 'TECHNICAL_INTERVIEW' THEN 6
+      WHEN 'INTERVIEW' THEN 6
       WHEN 'BEHAVIORAL_INTERVIEW' THEN 7
+      WHEN 'WAITLISTED' THEN 7
       WHEN 'FINAL_ROUND' THEN 8
+      WHEN 'ACCEPTED' THEN 9
       WHEN 'OFFER' THEN 9
       WHEN 'REJECTED' THEN 10
-      WHEN 'WITHDRAWN' THEN 11
-      WHEN 'ARCHIVED' THEN 12
+      WHEN 'DEFERRED' THEN 11
+      WHEN 'WITHDRAWN' THEN 12
+      WHEN 'ARCHIVED' THEN 13
       ELSE 13
     END ${direction}, a."updatedAt" DESC`;
   }
@@ -336,15 +392,15 @@ export async function getApplicationCounts(userId: string, filters: Omit<Applica
 export async function getKanbanApplications(userId: string) {
   return db.application.findMany({
     where: { userId, archived: false, status: { not: ApplicationStatusType.ARCHIVED }, deletedAt: null },
-    select: {
-      id: true,
-      companyName: true,
-      roleTitle: true,
-      location: true,
-      status: true,
-      priority: true,
-      deadline: true,
-    },
+    select: kanbanApplicationSelect,
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+export async function getKanbanApplicationsByMode(userId: string, applicationType: ApplicationType) {
+  return db.application.findMany({
+    where: { userId, applicationType, archived: false, status: { not: ApplicationStatusType.ARCHIVED }, deletedAt: null },
+    select: kanbanApplicationSelect,
     orderBy: { updatedAt: "desc" },
   });
 }
@@ -358,6 +414,9 @@ export async function getApplicationById(userId: string, id: string) {
 
 export async function createApplication(userId: string, input: unknown) {
   const parsed = applicationSchema.parse(input);
+  const isUniversity = parsed.applicationType === ApplicationType.UNIVERSITY;
+  const primaryName = isUniversity ? parsed.institutionName.trim() : parsed.companyName.trim();
+  const secondaryName = isUniversity ? parsed.programName.trim() : parsed.roleTitle.trim();
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { id: true },
@@ -365,7 +424,7 @@ export async function createApplication(userId: string, input: unknown) {
   if (!user) throw appError("UNAUTHORIZED", "Please sign in to continue.", { status: 401 });
 
   const existing = (await db.application.findMany({
-    where: { userId, deletedAt: null },
+    where: { userId, applicationType: parsed.applicationType, deletedAt: null },
     select: {
       id: true,
       companyName: true,
@@ -376,40 +435,81 @@ export async function createApplication(userId: string, input: unknown) {
     },
   })) satisfies DuplicateComparableApplication[];
   const duplicates = detectDuplicates(existing, {
-    companyName: parsed.companyName,
-    roleTitle: parsed.roleTitle,
+    companyName: primaryName,
+    roleTitle: secondaryName,
     season: parsed.season ?? null,
-    jobPostingUrl: parsed.jobPostingUrl || null,
-    applicationUrl: parsed.applicationUrl || null,
+    jobPostingUrl: parsed.jobPostingUrl || parsed.programUrl || null,
+    applicationUrl: parsed.applicationUrl || parsed.applicationPortalUrl || null,
   });
 
   const created = await db.application.create({
     data: {
       userId,
-      companyName: parsed.companyName,
-      roleTitle: parsed.roleTitle,
-      department: parsed.department,
+      applicationType: parsed.applicationType,
+      companyName: primaryName,
+      roleTitle: secondaryName,
+      department: isUniversity ? parsed.facultyOrDepartment : parsed.department,
       location: parsed.location,
       country: parsed.country,
-      workMode: parsed.workMode,
+      workMode: isUniversity ? "UNKNOWN" : parsed.workMode,
       status: parsed.status,
       priority: parsed.priority,
       source: parsed.source,
-      applicationUrl: parsed.applicationUrl || null,
-      jobPostingUrl: parsed.jobPostingUrl || null,
+      applicationUrl: (isUniversity ? parsed.applicationPortalUrl : parsed.applicationUrl) || null,
+      jobPostingUrl: (isUniversity ? parsed.programUrl : parsed.jobPostingUrl) || null,
       deadline: parsed.deadline ?? null,
-      appliedDate: parsed.appliedDate ?? null,
+      appliedDate: (isUniversity ? parsed.submittedDate : parsed.appliedDate) ?? null,
       discoveredDate: parsed.discoveredDate ?? null,
-      season: parsed.season ?? null,
-      applicationYear: parsed.applicationYear ?? null,
-      compensation: parsed.compensation,
-      visaSponsorship: parsed.visaSponsorship ?? null,
-      referralUsed: parsed.referralUsed,
-      jobDescription: parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
+      season: isUniversity ? null : parsed.season ?? null,
+      applicationYear: isUniversity ? parsed.intakeYear ?? null : parsed.applicationYear ?? null,
+      compensation: isUniversity ? parsed.tuitionEstimate : parsed.compensation,
+      visaSponsorship: isUniversity ? null : parsed.visaSponsorship ?? null,
+      referralUsed: isUniversity ? false : parsed.referralUsed,
+      jobDescription: !isUniversity && parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
       notes: parsed.notes ? sanitizeHtml(parsed.notes, { allowedTags: [] }) : null,
       archived: parsed.archived,
       archivedAt: parsed.archived ? new Date() : null,
       previousStatusBeforeArchive: parsed.archived ? parsed.status : null,
+      jobDetail: !isUniversity
+        ? {
+            create: {
+              companyName: primaryName,
+              roleTitle: secondaryName,
+              department: parsed.department,
+              workMode: parsed.workMode,
+              season: parsed.season ?? null,
+              applicationYear: parsed.applicationYear ?? null,
+              compensation: parsed.compensation,
+              visaSponsorship: parsed.visaSponsorship ?? null,
+              referralUsed: parsed.referralUsed,
+              jobPostingUrl: parsed.jobPostingUrl || null,
+              applicationUrl: parsed.applicationUrl || null,
+              jobDescription: parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
+            },
+          }
+        : undefined,
+      universityDetail: isUniversity
+        ? {
+            create: {
+              institutionName: primaryName,
+              programName: secondaryName,
+              degreeLevel: parsed.degreeLevel ?? null,
+              facultyOrDepartment: parsed.facultyOrDepartment,
+              applicationRound: parsed.applicationRound,
+              intakeTerm: parsed.intakeTerm ?? null,
+              intakeYear: parsed.intakeYear ?? null,
+              campus: parsed.campus,
+              programUrl: parsed.programUrl || null,
+              applicationPortalUrl: parsed.applicationPortalUrl || null,
+              tuitionEstimate: parsed.tuitionEstimate,
+              scholarshipApplied: parsed.scholarshipApplied,
+              fundingStatus: parsed.fundingStatus,
+              testRequirementStatus: parsed.testRequirementStatus,
+              recommendationRequirementStatus: parsed.recommendationRequirementStatus,
+              statementPrompt: parsed.statementPrompt ? sanitizeHtml(parsed.statementPrompt, { allowedTags: [] }) : null,
+            },
+          }
+        : undefined,
       tags: parsed.tagIds.length
         ? {
             createMany: {
@@ -441,35 +541,120 @@ export async function createApplication(userId: string, input: unknown) {
 }
 
 export async function updateApplication(userId: string, id: string, input: unknown) {
-  const parsed = applicationSchema.partial().parse(input);
+  const parsed = applicationSchema.parse(input);
   const existing = await db.application.findFirst({ where: { id, userId, deletedAt: null } });
   if (!existing) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+  if (parsed.applicationType !== existing.applicationType) {
+    throw appError("VALIDATION_ERROR", "Application type cannot be changed after creation.", {
+      fieldErrors: { applicationType: ["Application type cannot be changed after creation."] },
+    });
+  }
+
+  const isUniversity = existing.applicationType === ApplicationType.UNIVERSITY;
+  const primaryName = isUniversity ? parsed.institutionName.trim() : parsed.companyName.trim();
+  const secondaryName = isUniversity ? parsed.programName.trim() : parsed.roleTitle.trim();
 
   const updated = await db.application.update({
     where: { id },
     data: {
-      companyName: parsed.companyName,
-      roleTitle: parsed.roleTitle,
-      department: parsed.department,
+      companyName: primaryName,
+      roleTitle: secondaryName,
+      department: isUniversity ? parsed.facultyOrDepartment : parsed.department,
       location: parsed.location,
       country: parsed.country,
-      workMode: parsed.workMode,
+      workMode: isUniversity ? "UNKNOWN" : parsed.workMode,
       status: parsed.status,
       priority: parsed.priority,
       source: parsed.source,
-      applicationUrl: parsed.applicationUrl || undefined,
-      jobPostingUrl: parsed.jobPostingUrl || undefined,
+      applicationUrl: (isUniversity ? parsed.applicationPortalUrl : parsed.applicationUrl) || null,
+      jobPostingUrl: (isUniversity ? parsed.programUrl : parsed.jobPostingUrl) || null,
       deadline: parsed.deadline,
-      appliedDate: parsed.appliedDate,
+      appliedDate: isUniversity ? parsed.submittedDate : parsed.appliedDate,
       discoveredDate: parsed.discoveredDate,
-      season: parsed.season,
-      applicationYear: parsed.applicationYear,
-      compensation: parsed.compensation,
-      visaSponsorship: parsed.visaSponsorship,
-      referralUsed: parsed.referralUsed,
-      jobDescription: parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : undefined,
-      notes: parsed.notes ? sanitizeHtml(parsed.notes, { allowedTags: [] }) : undefined,
+      season: isUniversity ? null : parsed.season,
+      applicationYear: isUniversity ? parsed.intakeYear : parsed.applicationYear,
+      compensation: isUniversity ? parsed.tuitionEstimate : parsed.compensation,
+      visaSponsorship: isUniversity ? null : parsed.visaSponsorship,
+      referralUsed: isUniversity ? false : parsed.referralUsed,
+      jobDescription: !isUniversity && parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
+      notes: parsed.notes ? sanitizeHtml(parsed.notes, { allowedTags: [] }) : null,
       archived: parsed.archived,
+      jobDetail: !isUniversity
+        ? {
+            upsert: {
+              create: {
+                companyName: primaryName,
+                roleTitle: secondaryName,
+                department: parsed.department,
+                workMode: parsed.workMode,
+                season: parsed.season ?? null,
+                applicationYear: parsed.applicationYear ?? null,
+                compensation: parsed.compensation,
+                visaSponsorship: parsed.visaSponsorship ?? null,
+                referralUsed: parsed.referralUsed,
+                jobPostingUrl: parsed.jobPostingUrl || null,
+                applicationUrl: parsed.applicationUrl || null,
+                jobDescription: parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
+              },
+              update: {
+                companyName: primaryName,
+                roleTitle: secondaryName,
+                department: parsed.department,
+                workMode: parsed.workMode,
+                season: parsed.season ?? null,
+                applicationYear: parsed.applicationYear ?? null,
+                compensation: parsed.compensation,
+                visaSponsorship: parsed.visaSponsorship ?? null,
+                referralUsed: parsed.referralUsed,
+                jobPostingUrl: parsed.jobPostingUrl || null,
+                applicationUrl: parsed.applicationUrl || null,
+                jobDescription: parsed.jobDescription ? sanitizeHtml(parsed.jobDescription, { allowedTags: [] }) : null,
+              },
+            },
+          }
+        : undefined,
+      universityDetail: isUniversity
+        ? {
+            upsert: {
+              create: {
+                institutionName: primaryName,
+                programName: secondaryName,
+                degreeLevel: parsed.degreeLevel ?? null,
+                facultyOrDepartment: parsed.facultyOrDepartment,
+                applicationRound: parsed.applicationRound,
+                intakeTerm: parsed.intakeTerm ?? null,
+                intakeYear: parsed.intakeYear ?? null,
+                campus: parsed.campus,
+                programUrl: parsed.programUrl || null,
+                applicationPortalUrl: parsed.applicationPortalUrl || null,
+                tuitionEstimate: parsed.tuitionEstimate,
+                scholarshipApplied: parsed.scholarshipApplied,
+                fundingStatus: parsed.fundingStatus,
+                testRequirementStatus: parsed.testRequirementStatus,
+                recommendationRequirementStatus: parsed.recommendationRequirementStatus,
+                statementPrompt: parsed.statementPrompt ? sanitizeHtml(parsed.statementPrompt, { allowedTags: [] }) : null,
+              },
+              update: {
+                institutionName: primaryName,
+                programName: secondaryName,
+                degreeLevel: parsed.degreeLevel ?? null,
+                facultyOrDepartment: parsed.facultyOrDepartment,
+                applicationRound: parsed.applicationRound,
+                intakeTerm: parsed.intakeTerm ?? null,
+                intakeYear: parsed.intakeYear ?? null,
+                campus: parsed.campus,
+                programUrl: parsed.programUrl || null,
+                applicationPortalUrl: parsed.applicationPortalUrl || null,
+                tuitionEstimate: parsed.tuitionEstimate,
+                scholarshipApplied: parsed.scholarshipApplied,
+                fundingStatus: parsed.fundingStatus,
+                testRequirementStatus: parsed.testRequirementStatus,
+                recommendationRequirementStatus: parsed.recommendationRequirementStatus,
+                statementPrompt: parsed.statementPrompt ? sanitizeHtml(parsed.statementPrompt, { allowedTags: [] }) : null,
+              },
+            },
+          }
+        : undefined,
       tags: parsed.tagIds
         ? {
             deleteMany: {},
@@ -622,6 +807,11 @@ export async function changeApplicationStatus(
 ) {
   const app = await db.application.findFirst({ where: { id, userId, deletedAt: null } });
   if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+  if (!isStatusAllowedForMode(status, app.applicationType)) {
+    throw appError("VALIDATION_ERROR", "Choose a status that belongs to this application type.", {
+      fieldErrors: { status: ["Choose a status that belongs to this application type."] },
+    });
+  }
 
   const updated = await db.application.update({
     where: { id },
@@ -697,7 +887,7 @@ export async function bulkDeleteApplications(userId: string, ids: string[]) {
   return { updatedCount: applications.length };
 }
 
-export async function exportJson(userId: string) {
-  const applications = await getApplications(userId, { includeArchived: true });
+export async function exportJson(userId: string, applicationType?: ApplicationType) {
+  const applications = await getApplications(userId, { includeArchived: true, applicationType });
   return JSON.stringify(applications, null, 2);
 }

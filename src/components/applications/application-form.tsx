@@ -8,17 +8,22 @@ import { toast } from "sonner";
 import { createApplicationAction, updateApplicationAction } from "@/actions/applications";
 import { applicationSchema } from "@/lib/validations/application";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  APPLICATION_SOURCE_OPTIONS,
-  APPLICATION_STATUS_OPTIONS,
+  DEGREE_LEVEL_OPTIONS,
+  getModeLabels,
+  getSourceOptions,
+  getStatusOptions,
+  INTAKE_TERM_OPTIONS,
   PRIORITY_OPTIONS,
   WORK_MODE_OPTIONS,
+  type ApplicationMode,
 } from "@/constants/app";
-import { ApplicationStatusType, Priority } from "@prisma/client";
+import { ApplicationStatusType, ApplicationType, Priority } from "@prisma/client";
 import { z } from "zod";
 import type { FieldErrors } from "@/lib/errors";
 
@@ -29,19 +34,52 @@ function FieldError({ message }: { message?: string }) {
   return message ? <p className="text-sm text-destructive">{message}</p> : null;
 }
 
-export function ApplicationForm({ initialValues, id }: { initialValues?: Partial<FormValues>; id?: string }) {
+function BooleanField({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex min-h-11 items-center gap-2 rounded-lg border px-3 text-[15px]">
+      <Checkbox id={id} checked={checked} onCheckedChange={(value) => onCheckedChange(Boolean(value))} />
+      {label}
+    </label>
+  );
+}
+
+export function ApplicationForm({
+  initialValues,
+  id,
+  mode = "JOB",
+}: {
+  initialValues?: Partial<FormValues>;
+  id?: string;
+  mode?: ApplicationMode;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const activeMode = (initialValues?.applicationType as ApplicationMode | undefined) ?? mode;
+  const labels = getModeLabels(activeMode);
   const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(applicationSchema),
     defaultValues: {
+      applicationType: activeMode,
       companyName: "",
       roleTitle: "",
-      status: ApplicationStatusType.WISHLIST,
+      institutionName: "",
+      programName: "",
+      status: activeMode === ApplicationType.UNIVERSITY ? ApplicationStatusType.RESEARCHING : ApplicationStatusType.WISHLIST,
       workMode: "UNKNOWN",
       source: "OTHER",
       priority: Priority.MEDIUM,
       referralUsed: false,
+      scholarshipApplied: false,
       archived: false,
       tagIds: [],
       ...initialValues,
@@ -90,18 +128,73 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
 
   return (
     <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
-      <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="companyName">Company</Label>
-          <Input id="companyName" aria-invalid={Boolean(form.formState.errors.companyName)} {...form.register("companyName")} />
-          <FieldError message={form.formState.errors.companyName?.message} />
+      <input type="hidden" {...form.register("applicationType")} />
+
+      {activeMode === "UNIVERSITY" ? (
+        <>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="institutionName">Institution name</Label>
+              <Input
+                id="institutionName"
+                aria-invalid={Boolean(form.formState.errors.institutionName)}
+                {...form.register("institutionName")}
+              />
+              <FieldError message={form.formState.errors.institutionName?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="programName">Program name</Label>
+              <Input id="programName" aria-invalid={Boolean(form.formState.errors.programName)} {...form.register("programName")} />
+              <FieldError message={form.formState.errors.programName?.message} />
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Degree level</Label>
+              <Controller
+                control={form.control}
+                name="degreeLevel"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={(value) => field.onChange(value || undefined)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select degree" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEGREE_LEVEL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="facultyOrDepartment">Faculty/department</Label>
+              <Input id="facultyOrDepartment" {...form.register("facultyOrDepartment")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campus">Campus/city</Label>
+              <Input id="campus" {...form.register("campus")} />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="companyName">Company</Label>
+            <Input id="companyName" aria-invalid={Boolean(form.formState.errors.companyName)} {...form.register("companyName")} />
+            <FieldError message={form.formState.errors.companyName?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="roleTitle">Role title</Label>
+            <Input id="roleTitle" aria-invalid={Boolean(form.formState.errors.roleTitle)} {...form.register("roleTitle")} />
+            <FieldError message={form.formState.errors.roleTitle?.message} />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="roleTitle">Role title</Label>
-          <Input id="roleTitle" aria-invalid={Boolean(form.formState.errors.roleTitle)} {...form.register("roleTitle")} />
-          <FieldError message={form.formState.errors.roleTitle?.message} />
-        </div>
-      </div>
+      )}
 
       <div className="grid gap-5 md:grid-cols-3">
         <div className="space-y-2">
@@ -115,7 +208,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {APPLICATION_STATUS_OPTIONS.map((option) => (
+                  {getStatusOptions(activeMode).map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -149,17 +242,17 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
           <FieldError message={form.formState.errors.priority?.message} />
         </div>
         <div className="space-y-2">
-          <Label>Work mode</Label>
+          <Label>Source</Label>
           <Controller
             control={form.control}
-            name="workMode"
+            name="source"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["workMode"])}>
+              <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["source"])}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WORK_MODE_OPTIONS.map((option) => (
+                  {getSourceOptions(activeMode).map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -168,64 +261,171 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
               </Select>
             )}
           />
-          <FieldError message={form.formState.errors.workMode?.message} />
         </div>
       </div>
+
+      {activeMode === "JOB" ? (
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Work mode</Label>
+            <Controller
+              control={form.control}
+              name="workMode"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["workMode"])}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORK_MODE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <Input id="location" {...form.register("location")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input id="country" {...form.register("country")} />
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input id="country" {...form.register("country")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Intake term</Label>
+            <Controller
+              control={form.control}
+              name="intakeTerm"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={(value) => field.onChange(value || undefined)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INTAKE_TERM_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="intakeYear">Intake year</Label>
+            <Input id="intakeYear" type="number" min={2000} max={2100} {...form.register("intakeYear")} />
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
-          <Input id="location" {...form.register("location")} />
+          <Label htmlFor="deadline">{activeMode === "UNIVERSITY" ? "Application deadline" : "Deadline"}</Label>
+          <Input id="deadline" type="date" {...form.register("deadline")} />
+          <FieldError message={form.formState.errors.deadline?.message} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input id="country" {...form.register("country")} />
+          <Label htmlFor={activeMode === "UNIVERSITY" ? "submittedDate" : "appliedDate"}>{labels.submittedField} date</Label>
+          <Input
+            id={activeMode === "UNIVERSITY" ? "submittedDate" : "appliedDate"}
+            type="date"
+            {...form.register(activeMode === "UNIVERSITY" ? "submittedDate" : "appliedDate")}
+          />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Source</Label>
-        <Controller
-          control={form.control}
-          name="source"
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={(value) => field.onChange(value as FormValues["source"])}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {APPLICATION_SOURCE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      <div className="space-y-2">
-          <Label htmlFor="applicationUrl">Application URL</Label>
-        <Input
-          id="applicationUrl"
-          placeholder="https://..."
-          aria-invalid={Boolean(form.formState.errors.applicationUrl)}
-          {...form.register("applicationUrl")}
-        />
-        <FieldError message={form.formState.errors.applicationUrl?.message} />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="jobPostingUrl">Job posting URL</Label>
-        <Input
-          id="jobPostingUrl"
-          placeholder="https://..."
-          aria-invalid={Boolean(form.formState.errors.jobPostingUrl)}
-          {...form.register("jobPostingUrl")}
-        />
-        <FieldError message={form.formState.errors.jobPostingUrl?.message} />
-      </div>
+      {activeMode === "UNIVERSITY" ? (
+        <>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="applicationRound">Application round</Label>
+              <Input id="applicationRound" {...form.register("applicationRound")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tuitionEstimate">Tuition estimate</Label>
+              <Input id="tuitionEstimate" {...form.register("tuitionEstimate")} />
+            </div>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="programUrl">Program URL</Label>
+              <Input id="programUrl" placeholder="https://..." {...form.register("programUrl")} />
+              <FieldError message={form.formState.errors.programUrl?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="applicationPortalUrl">Application portal URL</Label>
+              <Input id="applicationPortalUrl" placeholder="https://..." {...form.register("applicationPortalUrl")} />
+              <FieldError message={form.formState.errors.applicationPortalUrl?.message} />
+            </div>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Controller
+              control={form.control}
+              name="scholarshipApplied"
+              render={({ field }) => (
+                <BooleanField
+                  id="scholarshipApplied"
+                  label="Scholarship applied"
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="fundingStatus">Funding status</Label>
+              <Input id="fundingStatus" {...form.register("fundingStatus")} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="statementPrompt">Statement prompt</Label>
+            <Textarea id="statementPrompt" rows={4} {...form.register("statementPrompt")} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="applicationUrl">Application URL</Label>
+              <Input id="applicationUrl" placeholder="https://..." {...form.register("applicationUrl")} />
+              <FieldError message={form.formState.errors.applicationUrl?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobPostingUrl">Job posting URL</Label>
+              <Input id="jobPostingUrl" placeholder="https://..." {...form.register("jobPostingUrl")} />
+              <FieldError message={form.formState.errors.jobPostingUrl?.message} />
+            </div>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <Controller
+              control={form.control}
+              name="referralUsed"
+              render={({ field }) => (
+                <BooleanField id="referralUsed" label="Referral used" checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+              )}
+            />
+            <div className="space-y-2">
+              <Label htmlFor="compensation">Compensation</Label>
+              <Input id="compensation" {...form.register("compensation")} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="jobDescription">Job description</Label>
+            <Textarea id="jobDescription" rows={4} {...form.register("jobDescription")} />
+          </div>
+        </>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
@@ -233,7 +433,7 @@ export function ApplicationForm({ initialValues, id }: { initialValues?: Partial
       </div>
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : id ? "Update application" : "Create application"}
+        {pending ? "Saving..." : id ? `Update ${labels.single}` : `Create ${labels.single}`}
       </Button>
     </form>
   );

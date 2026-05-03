@@ -87,7 +87,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{APP_NAME}</CardTitle>
-          <CardDescription>Track your internship pipeline from discovery to decision.</CardDescription>
+          <CardDescription>Track jobs, internships, and university applications from discovery to decision.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin">

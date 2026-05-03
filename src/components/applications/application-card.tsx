@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/applications/status-badge";
 import { PriorityBadge } from "@/components/applications/priority-badge";
 import { DeadlineBadge } from "@/components/applications/deadline-badge";
 import { suggestNextAction } from "@/lib/utils/next-action";
+import { getApplicationPrimaryTitle, getApplicationSecondaryTitle } from "@/constants/app";
 
 export function ApplicationCard({ application }: { application: ApplicationListItem }) {
   return (
@@ -14,8 +15,8 @@ export function ApplicationCard({ application }: { application: ApplicationListI
         <CardHeader className="space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <CardTitle>{application.companyName}</CardTitle>
-              <CardDescription className="text-[15px]">{application.roleTitle}</CardDescription>
+              <CardTitle>{getApplicationPrimaryTitle(application)}</CardTitle>
+              <CardDescription className="text-[15px]">{getApplicationSecondaryTitle(application)}</CardDescription>
             </div>
             <PriorityBadge priority={application.priority} />
           </div>

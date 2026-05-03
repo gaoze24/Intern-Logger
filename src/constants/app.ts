@@ -1,6 +1,9 @@
 import type {
   ApplicationStatusType,
+  ApplicationType,
+  DegreeLevel,
   DocumentType,
+  IntakeTerm,
   InterviewOutcome,
   InterviewType,
   Priority,
@@ -11,7 +14,23 @@ import type {
   WorkMode,
 } from "@prisma/client";
 
-export const APP_NAME = "Internship Tracker";
+export const APP_NAME = "Application Tracker";
+export type ApplicationMode = ApplicationType;
+
+export const APPLICATION_MODES: { value: ApplicationMode; label: string; shortLabel: string; description: string }[] = [
+  {
+    value: "JOB",
+    label: "Job Applications",
+    shortLabel: "Job",
+    description: "Track internships, full-time roles, interviews, offers, and recruiting tasks.",
+  },
+  {
+    value: "UNIVERSITY",
+    label: "University Applications",
+    shortLabel: "University",
+    description: "Track schools, programs, documents, admissions deadlines, and decisions.",
+  },
+];
 
 export function formatEnumLabel(value: string) {
   return value
@@ -43,27 +62,74 @@ export const DEFAULT_STATUSES: {
   { name: "Archived", type: "ARCHIVED", color: "#6b7280", order: 12, isFinal: true },
 ];
 
+export const JOB_STATUS_OPTIONS: { value: ApplicationStatusType; label: string }[] = [
+  { value: "WISHLIST", label: "Wishlist" },
+  { value: "PREPARING", label: "Preparing" },
+  { value: "APPLIED", label: "Applied" },
+  { value: "ONLINE_ASSESSMENT", label: "Online Assessment" },
+  { value: "RECRUITER_SCREEN", label: "Recruiter Screen" },
+  { value: "TECHNICAL_INTERVIEW", label: "Technical Interview" },
+  { value: "BEHAVIORAL_INTERVIEW", label: "Behavioral Interview" },
+  { value: "FINAL_ROUND", label: "Final Round" },
+  { value: "OFFER", label: "Offer" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "WITHDRAWN", label: "Withdrawn" },
+  { value: "ARCHIVED", label: "Archived" },
+];
+
+export const UNIVERSITY_STATUS_OPTIONS: { value: ApplicationStatusType; label: string }[] = [
+  { value: "RESEARCHING", label: "Researching" },
+  { value: "PREPARING", label: "Preparing" },
+  { value: "DOCUMENTS_PENDING", label: "Documents Pending" },
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "UNDER_REVIEW", label: "Under Review" },
+  { value: "INTERVIEW", label: "Interview" },
+  { value: "WAITLISTED", label: "Waitlisted" },
+  { value: "ACCEPTED", label: "Accepted" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "DEFERRED", label: "Deferred" },
+  { value: "WITHDRAWN", label: "Withdrawn" },
+  { value: "ARCHIVED", label: "Archived" },
+];
+
 export const STATUS_LABELS: Record<ApplicationStatusType, string> = {
   WISHLIST: "Wishlist",
+  RESEARCHING: "Researching",
   PREPARING: "Preparing",
+  DOCUMENTS_PENDING: "Documents Pending",
   APPLIED: "Applied",
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under Review",
   ONLINE_ASSESSMENT: "Online Assessment",
   RECRUITER_SCREEN: "Recruiter Screen",
   TECHNICAL_INTERVIEW: "Technical Interview",
   BEHAVIORAL_INTERVIEW: "Behavioral Interview",
   FINAL_ROUND: "Final Round",
+  INTERVIEW: "Interview",
+  WAITLISTED: "Waitlisted",
   OFFER: "Offer",
+  ACCEPTED: "Accepted",
   REJECTED: "Rejected",
+  DEFERRED: "Deferred",
   WITHDRAWN: "Withdrawn",
   ARCHIVED: "Archived",
   CUSTOM: "Custom",
 };
 
-export const APPLICATION_STATUS_OPTIONS: { value: ApplicationStatusType; label: string }[] =
-  Object.entries(STATUS_LABELS).map(([value, label]) => ({
-    value: value as ApplicationStatusType,
-    label,
-  }));
+export const APPLICATION_STATUS_OPTIONS: { value: ApplicationStatusType; label: string }[] = Object.entries(
+  STATUS_LABELS,
+).map(([value, label]) => ({
+  value: value as ApplicationStatusType,
+  label,
+}));
+
+export function getStatusOptions(mode: ApplicationMode) {
+  return mode === "UNIVERSITY" ? UNIVERSITY_STATUS_OPTIONS : JOB_STATUS_OPTIONS;
+}
+
+export function isStatusAllowedForMode(status: ApplicationStatusType, mode: ApplicationMode) {
+  return getStatusOptions(mode).some((option) => option.value === status);
+}
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
   LOW: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
@@ -110,17 +176,6 @@ export const WORK_MODE_OPTIONS: { value: WorkMode; label: string }[] = WORK_MODE
   label: WORK_MODE_LABELS[value],
 }));
 
-export const SOURCES: Source[] = [
-  "LINKEDIN",
-  "COMPANY_WEBSITE",
-  "REFERRAL",
-  "CAREER_FAIR",
-  "RECRUITER",
-  "UNIVERSITY_PORTAL",
-  "EMAIL",
-  "OTHER",
-];
-
 export const SOURCE_LABELS: Record<Source, string> = {
   LINKEDIN: "LinkedIn",
   COMPANY_WEBSITE: "Company Website",
@@ -128,14 +183,47 @@ export const SOURCE_LABELS: Record<Source, string> = {
   CAREER_FAIR: "Career Fair",
   RECRUITER: "Recruiter",
   UNIVERSITY_PORTAL: "University Portal",
+  UNIVERSITY_WEBSITE: "University Website",
+  COMMON_APP: "Common App",
+  UCAS: "UCAS",
+  GRAD_PORTAL: "Grad Portal",
+  AGENT_CONSULTANT: "Agent/Consultant",
+  PROFESSOR: "Professor",
+  ALUMNI: "Alumni",
+  EDUCATION_FAIR: "Education Fair",
   EMAIL: "Email",
   OTHER: "Other",
 };
+
+export const SOURCES: Source[] = Object.keys(SOURCE_LABELS) as Source[];
 
 export const APPLICATION_SOURCE_OPTIONS: { value: Source; label: string }[] = SOURCES.map((value) => ({
   value,
   label: SOURCE_LABELS[value],
 }));
+
+export const JOB_SOURCE_OPTIONS: { value: Source; label: string }[] = (
+  ["LINKEDIN", "COMPANY_WEBSITE", "REFERRAL", "CAREER_FAIR", "RECRUITER", "UNIVERSITY_PORTAL", "EMAIL", "OTHER"] as Source[]
+).map((value) => ({ value, label: SOURCE_LABELS[value] }));
+
+export const UNIVERSITY_SOURCE_OPTIONS: { value: Source; label: string }[] = (
+  [
+    "UNIVERSITY_WEBSITE",
+    "COMMON_APP",
+    "UCAS",
+    "GRAD_PORTAL",
+    "AGENT_CONSULTANT",
+    "PROFESSOR",
+    "ALUMNI",
+    "EDUCATION_FAIR",
+    "EMAIL",
+    "OTHER",
+  ] as Source[]
+).map((value) => ({ value, label: SOURCE_LABELS[value] }));
+
+export function getSourceOptions(mode: ApplicationMode) {
+  return mode === "UNIVERSITY" ? UNIVERSITY_SOURCE_OPTIONS : JOB_SOURCE_OPTIONS;
+}
 
 export const INTERVIEW_TYPE_LABELS: Record<InterviewType, string> = {
   OA: "Online Assessment",
@@ -184,21 +272,47 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   GITHUB: "GitHub",
   WEBSITE: "Personal Website",
   WRITING_SAMPLE: "Writing Sample",
+  CERTIFICATE: "Certificate",
+  PERSONAL_STATEMENT: "Personal Statement",
+  STATEMENT_OF_PURPOSE: "Statement of Purpose",
+  RECOMMENDATION_LETTER: "Recommendation Letter",
+  TEST_SCORE: "Test Score",
+  RESEARCH_PROPOSAL: "Research Proposal",
+  PASSPORT: "Passport",
+  FINANCIAL_DOCUMENT: "Financial Document",
+  SCHOLARSHIP_ESSAY: "Scholarship Essay",
   OTHER: "Other",
 };
 
 export const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = (
+  Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
+).map((value) => ({ value, label: DOCUMENT_TYPE_LABELS[value] }));
+
+export const JOB_DOCUMENT_TYPES: { value: DocumentType; label: string }[] = (
+  ["RESUME", "COVER_LETTER", "TRANSCRIPT", "PORTFOLIO", "GITHUB", "WEBSITE", "WRITING_SAMPLE", "CERTIFICATE", "OTHER"] as DocumentType[]
+).map((value) => ({ value, label: DOCUMENT_TYPE_LABELS[value] }));
+
+export const UNIVERSITY_DOCUMENT_TYPES: { value: DocumentType; label: string }[] = (
   [
+    "PERSONAL_STATEMENT",
+    "STATEMENT_OF_PURPOSE",
     "RESUME",
-    "COVER_LETTER",
     "TRANSCRIPT",
+    "RECOMMENDATION_LETTER",
+    "TEST_SCORE",
     "PORTFOLIO",
-    "GITHUB",
-    "WEBSITE",
     "WRITING_SAMPLE",
+    "RESEARCH_PROPOSAL",
+    "PASSPORT",
+    "FINANCIAL_DOCUMENT",
+    "SCHOLARSHIP_ESSAY",
     "OTHER",
   ] as DocumentType[]
 ).map((value) => ({ value, label: DOCUMENT_TYPE_LABELS[value] }));
+
+export function getDocumentTypeOptions(mode: ApplicationMode) {
+  return mode === "UNIVERSITY" ? UNIVERSITY_DOCUMENT_TYPES : JOB_DOCUMENT_TYPES;
+}
 
 export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   RECRUITER: "Recruiter",
@@ -208,21 +322,41 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   HIRING_MANAGER: "Hiring Manager",
   EMPLOYEE: "Employee",
   FRIEND: "Friend",
+  ADMISSIONS_OFFICER: "Admissions Officer",
+  PROFESSOR: "Professor",
+  POTENTIAL_SUPERVISOR: "Potential Supervisor",
+  PROGRAM_COORDINATOR: "Program Coordinator",
+  CURRENT_STUDENT: "Current Student",
+  RECOMMENDER: "Recommender",
+  AGENT_CONSULTANT: "Agent/Consultant",
   OTHER: "Other",
 };
 
 export const RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; label: string }[] = (
+  Object.keys(RELATIONSHIP_TYPE_LABELS) as RelationshipType[]
+).map((value) => ({ value, label: RELATIONSHIP_TYPE_LABELS[value] }));
+
+export const JOB_RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; label: string }[] = (
+  ["RECRUITER", "HIRING_MANAGER", "INTERVIEWER", "REFERRAL", "ALUMNI", "EMPLOYEE", "FRIEND", "OTHER"] as RelationshipType[]
+).map((value) => ({ value, label: RELATIONSHIP_TYPE_LABELS[value] }));
+
+export const UNIVERSITY_RELATIONSHIP_TYPE_OPTIONS: { value: RelationshipType; label: string }[] = (
   [
-    "RECRUITER",
-    "HIRING_MANAGER",
-    "INTERVIEWER",
-    "REFERRAL",
+    "ADMISSIONS_OFFICER",
+    "PROFESSOR",
+    "POTENTIAL_SUPERVISOR",
+    "PROGRAM_COORDINATOR",
     "ALUMNI",
-    "EMPLOYEE",
-    "FRIEND",
+    "CURRENT_STUDENT",
+    "RECOMMENDER",
+    "AGENT_CONSULTANT",
     "OTHER",
   ] as RelationshipType[]
 ).map((value) => ({ value, label: RELATIONSHIP_TYPE_LABELS[value] }));
+
+export function getRelationshipTypeOptions(mode: ApplicationMode) {
+  return mode === "UNIVERSITY" ? UNIVERSITY_RELATIONSHIP_TYPE_OPTIONS : JOB_RELATIONSHIP_TYPE_OPTIONS;
+}
 
 export const TIMELINE_EVENT_TYPE_LABELS: Record<TimelineEventType, string> = {
   DISCOVERED: "Discovered",
@@ -259,3 +393,107 @@ export const DOCUMENT_USAGE_OPTIONS = [
   "Reference",
   "Other",
 ] as const;
+
+export const JOB_DOCUMENT_USAGE_OPTIONS = DOCUMENT_USAGE_OPTIONS;
+
+export const UNIVERSITY_DOCUMENT_USAGE_OPTIONS = [
+  "Required Document",
+  "Submitted Document",
+  "Optional Supplement",
+  "Recommendation",
+  "Test Score",
+  "Scholarship Material",
+  "Other",
+] as const;
+
+export const DEGREE_LEVEL_LABELS: Record<DegreeLevel, string> = {
+  UNDERGRADUATE: "Undergraduate",
+  MASTERS: "Master's",
+  PHD: "PhD",
+  MBA: "MBA",
+  EXCHANGE: "Exchange",
+  TRANSFER: "Transfer",
+  CERTIFICATE: "Certificate",
+  OTHER: "Other",
+};
+
+export const DEGREE_LEVEL_OPTIONS: { value: DegreeLevel; label: string }[] = (
+  ["UNDERGRADUATE", "MASTERS", "PHD", "MBA", "EXCHANGE", "TRANSFER", "CERTIFICATE", "OTHER"] as DegreeLevel[]
+).map((value) => ({ value, label: DEGREE_LEVEL_LABELS[value] }));
+
+export const INTAKE_TERM_LABELS: Record<IntakeTerm, string> = {
+  FALL: "Fall",
+  SPRING: "Spring",
+  SUMMER: "Summer",
+  WINTER: "Winter",
+  ROLLING: "Rolling",
+  OTHER: "Other",
+};
+
+export const INTAKE_TERM_OPTIONS: { value: IntakeTerm; label: string }[] = (
+  ["FALL", "SPRING", "SUMMER", "WINTER", "ROLLING", "OTHER"] as IntakeTerm[]
+).map((value) => ({ value, label: INTAKE_TERM_LABELS[value] }));
+
+export function getModeLabels(mode: ApplicationMode) {
+  if (mode === "UNIVERSITY") {
+    return {
+      modeLabel: "University Applications",
+      single: "University Application",
+      add: "Add University Application",
+      emptyTitle: "No university applications yet",
+      emptyDescription: "Add a school or program to start tracking deadlines, documents, and admissions decisions.",
+      dashboardDescription: "Overview of your university application pipeline",
+      applicationsDescription: "Track, filter, and manage your university applications",
+      searchPlaceholder: "Search institution, program, country, notes...",
+      primaryField: "Institution",
+      secondaryField: "Program",
+      submittedField: "Submitted",
+      acceptedMetric: "Accepted",
+      rejectedMetric: "Rejected",
+    };
+  }
+
+  return {
+    modeLabel: "Job Applications",
+    single: "Job Application",
+    add: "Add Job Application",
+    emptyTitle: "No job applications yet",
+    emptyDescription: "Add your first job, internship, or graduate scheme application to start tracking your pipeline.",
+    dashboardDescription: "Overview of your job application pipeline",
+    applicationsDescription: "Track, filter, and manage your job applications",
+    searchPlaceholder: "Search company, role, notes, recruiter...",
+    primaryField: "Company",
+    secondaryField: "Role",
+    submittedField: "Applied",
+    acceptedMetric: "Offers",
+    rejectedMetric: "Rejections",
+  };
+}
+
+type DisplayApplication = {
+  applicationType?: ApplicationMode;
+  companyName?: string | null;
+  roleTitle?: string | null;
+  jobDetail?: { companyName?: string | null; roleTitle?: string | null } | null;
+  universityDetail?: { institutionName?: string | null; programName?: string | null } | null;
+};
+
+export function getApplicationPrimaryTitle(application: DisplayApplication) {
+  if (application.applicationType === "UNIVERSITY") {
+    return application.universityDetail?.institutionName ?? application.companyName ?? "Untitled institution";
+  }
+
+  return application.jobDetail?.companyName ?? application.companyName ?? "Untitled company";
+}
+
+export function getApplicationSecondaryTitle(application: DisplayApplication) {
+  if (application.applicationType === "UNIVERSITY") {
+    return application.universityDetail?.programName ?? application.roleTitle ?? "Untitled program";
+  }
+
+  return application.jobDetail?.roleTitle ?? application.roleTitle ?? "Untitled role";
+}
+
+export function getApplicationDisplayName(application: DisplayApplication) {
+  return `${getApplicationPrimaryTitle(application)} · ${getApplicationSecondaryTitle(application)}`;
+}

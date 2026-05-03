@@ -58,23 +58,30 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  APPLICATION_SOURCE_OPTIONS,
+  DEGREE_LEVEL_LABELS,
   DOCUMENT_TYPE_LABELS,
-  DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_USAGE_OPTIONS,
+  getApplicationPrimaryTitle,
+  getApplicationSecondaryTitle,
+  getDocumentTypeOptions,
+  getModeLabels,
+  getRelationshipTypeOptions,
+  getSourceOptions,
+  INTAKE_TERM_LABELS,
   formatEnumLabel,
   INTERVIEW_OUTCOME_LABELS,
   INTERVIEW_OUTCOME_OPTIONS,
   INTERVIEW_TYPE_LABELS,
   INTERVIEW_TYPE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
-  RELATIONSHIP_TYPE_OPTIONS,
   SOURCE_LABELS,
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_OPTIONS,
   TIMELINE_EVENT_TYPE_LABELS,
   TIMELINE_EVENT_TYPE_OPTIONS,
   WORK_MODE_LABELS,
+  UNIVERSITY_DOCUMENT_USAGE_OPTIONS,
+  type ApplicationMode,
 } from "@/constants/app";
 import { formatDate } from "@/lib/utils/date";
 import { suggestNextAction } from "@/lib/utils/next-action";
@@ -384,10 +391,12 @@ function InterviewDialog({
 
 function TaskDialog({
   applicationId,
+  applicationType,
   task,
   trigger,
 }: {
   applicationId: string;
+  applicationType: ApplicationMode;
   task?: Task;
   trigger: React.ReactNode;
 }) {
@@ -398,6 +407,7 @@ function TaskDialog({
       trigger={trigger}
       onSubmit={async (formData) => {
         const data = {
+          applicationType,
           applicationId,
           title: String(formData.get("title") || "").trim(),
           description: optional(formData.get("description")),
@@ -438,21 +448,29 @@ function TaskDialog({
 }
 
 function ContactDialog({
+  applicationType,
   contact,
   trigger,
   onSave,
 }: {
+  applicationType: ApplicationMode;
   contact?: Contact;
   trigger: React.ReactNode;
   onSave: (data: Record<string, unknown>) => Promise<unknown>;
 }) {
+  const labels = getModeLabels(applicationType);
   return (
     <FormDialog
       title={contact ? "Edit contact" : "Create contact"}
-      description="Manage recruiter, referral, alumni, or interviewer details."
+      description={
+        applicationType === "UNIVERSITY"
+          ? "Manage admissions officers, professors, recommenders, and program contacts."
+          : "Manage recruiter, referral, alumni, or interviewer details."
+      }
       trigger={trigger}
       onSubmit={async (formData) => {
         return onSave({
+          applicationType,
           name: String(formData.get("name") || "").trim(),
           company: optional(formData.get("company")),
           role: optional(formData.get("role")),
@@ -470,10 +488,10 @@ function ContactDialog({
         <Field label="Name">
           <Input name="name" required autoFocus defaultValue={contact?.name ?? ""} />
         </Field>
-        <Field label="Company">
+        <Field label={labels.primaryField}>
           <Input name="company" defaultValue={contact?.company ?? ""} />
         </Field>
-        <Field label="Role">
+        <Field label={applicationType === "UNIVERSITY" ? "Role / relationship" : "Role"}>
           <Input name="role" defaultValue={contact?.role ?? ""} />
         </Field>
         <Field label="Email">
@@ -483,8 +501,11 @@ function ContactDialog({
           <Input name="linkedinUrl" type="url" defaultValue={contact?.linkedinUrl ?? ""} />
         </Field>
         <Field label="Relationship">
-          <NativeSelect name="relationshipType" defaultValue={contact?.relationshipType ?? "RECRUITER"}>
-            {RELATIONSHIP_TYPE_OPTIONS.map((option) => (
+          <NativeSelect
+            name="relationshipType"
+            defaultValue={contact?.relationshipType ?? (applicationType === "UNIVERSITY" ? "ADMISSIONS_OFFICER" : "RECRUITER")}
+          >
+            {getRelationshipTypeOptions(applicationType).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -494,7 +515,7 @@ function ContactDialog({
         <Field label="Source">
           <NativeSelect name="source" defaultValue={contact?.source ?? ""}>
             <option value="">None</option>
-            {APPLICATION_SOURCE_OPTIONS.map((option) => (
+            {getSourceOptions(applicationType).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -517,9 +538,11 @@ function ContactDialog({
 
 function LinkContactDialog({
   applicationId,
+  applicationType,
   contacts,
 }: {
   applicationId: string;
+  applicationType: ApplicationMode;
   contacts: ContactListItem[];
 }) {
   return (
@@ -545,17 +568,22 @@ function LinkContactDialog({
         </NativeSelect>
       </Field>
       <Field label="Relationship to application">
-        <Input name="relationshipToApplication" placeholder="Recruiter, referral, interviewer..." />
+        <Input
+          name="relationshipToApplication"
+          placeholder={applicationType === "UNIVERSITY" ? "Admissions officer, professor, recommender..." : "Recruiter, referral, interviewer..."}
+        />
       </Field>
     </FormDialog>
   );
 }
 
 function DocumentDialog({
+  applicationType,
   document,
   trigger,
   onSave,
 }: {
+  applicationType: ApplicationMode;
   document?: Document;
   trigger: React.ReactNode;
   onSave: (data: Record<string, unknown>) => Promise<unknown>;
@@ -563,10 +591,15 @@ function DocumentDialog({
   return (
     <FormDialog
       title={document ? "Edit document" : "Add document"}
-      description="Store the URL and metadata for a resume, cover letter, portfolio, or supporting file."
+      description={
+        applicationType === "UNIVERSITY"
+          ? "Store admissions documents, recommendations, test scores, and scholarship materials."
+          : "Store the URL and metadata for a resume, cover letter, portfolio, or supporting file."
+      }
       trigger={trigger}
       onSubmit={async (formData) => {
         return onSave({
+          applicationType,
           name: String(formData.get("name") || "").trim(),
           type: formData.get("type"),
           url: String(formData.get("url") || "").trim(),
@@ -584,8 +617,8 @@ function DocumentDialog({
           <Input name="name" required autoFocus defaultValue={document?.name ?? ""} />
         </Field>
         <Field label="Type">
-          <NativeSelect name="type" defaultValue={document?.type ?? "RESUME"}>
-            {DOCUMENT_TYPE_OPTIONS.map((option) => (
+          <NativeSelect name="type" defaultValue={document?.type ?? (applicationType === "UNIVERSITY" ? "PERSONAL_STATEMENT" : "RESUME")}>
+            {getDocumentTypeOptions(applicationType).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -611,11 +644,14 @@ function DocumentDialog({
 
 function LinkDocumentDialog({
   applicationId,
+  applicationType,
   documents,
 }: {
   applicationId: string;
+  applicationType: ApplicationMode;
   documents: DocumentListItem[];
 }) {
+  const usageOptions = applicationType === "UNIVERSITY" ? UNIVERSITY_DOCUMENT_USAGE_OPTIONS : DOCUMENT_USAGE_OPTIONS;
   return (
     <FormDialog
       title="Link existing document"
@@ -641,7 +677,7 @@ function LinkDocumentDialog({
       </Field>
       <Field label="Usage type">
         <NativeSelect name="usageType">
-          {DOCUMENT_USAGE_OPTIONS.map((usage) => (
+          {usageOptions.map((usage) => (
             <option key={usage} value={usage}>
               {usage}
             </option>
@@ -723,6 +759,10 @@ function runMutation(action: () => Promise<unknown>, success: string) {
 export function ApplicationWorkspace({ application, contacts, documents, initialTab = "overview" }: WorkspaceProps) {
   const [tab, setTab] = useState(initialTab);
   const [pending, startTransition] = useTransition();
+  const isUniversity = application.applicationType === "UNIVERSITY";
+  const labels = getModeLabels(application.applicationType);
+  const primaryTitle = getApplicationPrimaryTitle(application);
+  const secondaryTitle = getApplicationSecondaryTitle(application);
   const upcomingInterview = application.interviews
     .filter((interview) => interview.scheduledAt >= new Date())
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
@@ -734,6 +774,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
   const addTaskButton = (
     <TaskDialog
       applicationId={application.id}
+      applicationType={application.applicationType}
       trigger={
         <Button variant="outline" size="sm">
           <Plus className="size-4" />
@@ -745,6 +786,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
 
   const createContactButton = (
     <ContactDialog
+      applicationType={application.applicationType}
       trigger={<Button variant="outline" size="sm">Create Contact</Button>}
       onSave={async (data) => {
         const contact = await createContactAction(data);
@@ -757,6 +799,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
 
   const addDocumentButton = (
     <DocumentDialog
+      applicationType={application.applicationType}
       trigger={<Button variant="outline" size="sm">Add Document</Button>}
       onSave={async (data) => {
         const document = await createDocumentAction(data);
@@ -773,8 +816,8 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-xl">{application.companyName}</CardTitle>
-              <CardDescription>{application.roleTitle}</CardDescription>
+              <CardTitle className="text-xl">{primaryTitle}</CardTitle>
+              <CardDescription>{secondaryTitle}</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setTab("edit")}>
@@ -787,27 +830,48 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
           </div>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          <DetailRow label="Company" value={application.companyName} />
-          <DetailRow label="Role" value={application.roleTitle} />
-          <DetailRow label="Work mode" value={WORK_MODE_LABELS[application.workMode]} />
-          <DetailRow label="Location" value={application.location} />
-          <DetailRow label="Country" value={application.country} />
-          <DetailRow label="Season" value={application.season ? application.season.toLowerCase() : "-"} />
+          <DetailRow label={labels.primaryField} value={primaryTitle} />
+          <DetailRow label={labels.secondaryField} value={secondaryTitle} />
+          {isUniversity ? (
+            <>
+              <DetailRow label="Degree level" value={application.universityDetail?.degreeLevel ? DEGREE_LEVEL_LABELS[application.universityDetail.degreeLevel] : null} />
+              <DetailRow label="Faculty/department" value={application.universityDetail?.facultyOrDepartment} />
+              <DetailRow label="Campus" value={application.universityDetail?.campus} />
+              <DetailRow label="Country" value={application.country} />
+              <DetailRow
+                label="Intake"
+                value={[
+                  application.universityDetail?.intakeTerm ? INTAKE_TERM_LABELS[application.universityDetail.intakeTerm] : null,
+                  application.universityDetail?.intakeYear,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              />
+              <DetailRow label="Application round" value={application.universityDetail?.applicationRound} />
+            </>
+          ) : (
+            <>
+              <DetailRow label="Work mode" value={WORK_MODE_LABELS[application.workMode]} />
+              <DetailRow label="Location" value={application.location} />
+              <DetailRow label="Country" value={application.country} />
+              <DetailRow label="Season" value={application.season ? application.season.toLowerCase() : "-"} />
+            </>
+          )}
           <DetailRow label="Source" value={SOURCE_LABELS[application.source]} />
-          <DetailRow label="Applied date" value={formatDate(application.appliedDate)} />
+          <DetailRow label={`${labels.submittedField} date`} value={formatDate(application.appliedDate)} />
           <DetailRow label="Deadline" value={formatDate(application.deadline)} />
           <DetailRow
-            label="Job posting"
+            label={isUniversity ? "Program URL" : "Job posting"}
             value={
               application.jobPostingUrl ? (
                 <a className="text-primary underline" href={application.jobPostingUrl} target="_blank" rel="noreferrer">
-                  Open posting
+                  {isUniversity ? "Open program" : "Open posting"}
                 </a>
               ) : null
             }
           />
           <DetailRow
-            label="Application URL"
+            label={isUniversity ? "Portal URL" : "Application URL"}
             value={
               application.applicationUrl ? (
                 <a className="text-primary underline" href={application.applicationUrl} target="_blank" rel="noreferrer">
@@ -816,7 +880,14 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
               ) : null
             }
           />
-          <DetailRow label="Referral used" value={application.referralUsed ? "Yes" : "No"} />
+          {isUniversity ? (
+            <>
+              <DetailRow label="Scholarship applied" value={application.universityDetail?.scholarshipApplied ? "Yes" : "No"} />
+              <DetailRow label="Funding status" value={application.universityDetail?.fundingStatus} />
+            </>
+          ) : (
+            <DetailRow label="Referral used" value={application.referralUsed ? "Yes" : "No"} />
+          )}
         </CardContent>
       </Card>
 
@@ -906,11 +977,15 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Notes and job description</CardTitle>
+                <CardTitle className="text-base">{isUniversity ? "Notes and statement prompt" : "Notes and job description"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 whitespace-pre-wrap text-muted-foreground">
                 <p>{application.notes || "No notes saved yet."}</p>
-                <p>{application.jobDescription || "No job description saved yet."}</p>
+                <p>
+                  {isUniversity
+                    ? application.universityDetail?.statementPrompt || "No statement prompt saved yet."
+                    : application.jobDescription || "No job description saved yet."}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -925,20 +1000,42 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
             <CardContent>
               <ApplicationForm
                 id={application.id}
+                mode={application.applicationType}
                 initialValues={{
+                  applicationType: application.applicationType,
                   companyName: application.companyName,
                   roleTitle: application.roleTitle,
+                  institutionName: application.universityDetail?.institutionName ?? application.companyName,
+                  programName: application.universityDetail?.programName ?? application.roleTitle,
+                  degreeLevel: application.universityDetail?.degreeLevel ?? undefined,
+                  facultyOrDepartment: application.universityDetail?.facultyOrDepartment ?? "",
+                  applicationRound: application.universityDetail?.applicationRound ?? "",
+                  intakeTerm: application.universityDetail?.intakeTerm ?? undefined,
+                  intakeYear: application.universityDetail?.intakeYear ?? undefined,
+                  campus: application.universityDetail?.campus ?? "",
+                  programUrl: application.universityDetail?.programUrl ?? application.jobPostingUrl ?? "",
+                  applicationPortalUrl: application.universityDetail?.applicationPortalUrl ?? application.applicationUrl ?? "",
+                  tuitionEstimate: application.universityDetail?.tuitionEstimate ?? "",
+                  scholarshipApplied: application.universityDetail?.scholarshipApplied ?? false,
+                  fundingStatus: application.universityDetail?.fundingStatus ?? "",
+                  testRequirementStatus: application.universityDetail?.testRequirementStatus ?? "",
+                  recommendationRequirementStatus: application.universityDetail?.recommendationRequirementStatus ?? "",
+                  statementPrompt: application.universityDetail?.statementPrompt ?? "",
                   status: application.status,
                   location: application.location ?? "",
                   country: application.country ?? "",
                   workMode: application.workMode,
                   source: application.source,
                   priority: application.priority,
+                  deadline: toDateInput(application.deadline),
+                  appliedDate: toDateInput(application.appliedDate),
+                  submittedDate: toDateInput(application.appliedDate),
                   applicationUrl: application.applicationUrl ?? "",
                   jobPostingUrl: application.jobPostingUrl ?? "",
                   notes: application.notes ?? "",
                   archived: application.archived,
                   referralUsed: application.referralUsed,
+                  jobDescription: application.jobDescription ?? "",
                   tagIds: application.tags.map((t) => t.tagId),
                 }}
               />
@@ -1093,6 +1190,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
                         Complete
                       </Button>
                       <TaskDialog
+                        applicationType={application.applicationType}
                         applicationId={application.id}
                         task={task}
                         trigger={<Button variant="outline" size="sm">Edit</Button>}
@@ -1127,10 +1225,14 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
         <TabsContent value="contacts" className="space-y-5">
           <TabHeader
             title="Contacts"
-            description="Manage recruiters, referrals, interviewers, alumni, and hiring contacts for this application."
+            description={
+              isUniversity
+                ? "Manage admissions officers, professors, recommenders, alumni, and program contacts for this application."
+                : "Manage recruiters, referrals, interviewers, alumni, and hiring contacts for this application."
+            }
             actions={
               <>
-                <LinkContactDialog applicationId={application.id} contacts={contacts} />
+                <LinkContactDialog applicationId={application.id} applicationType={application.applicationType} contacts={contacts} />
                 {createContactButton}
               </>
             }
@@ -1159,6 +1261,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
                     {link.contact.notes ? <p className="text-muted-foreground">{link.contact.notes}</p> : null}
                     <div className="flex flex-wrap gap-2">
                       <ContactDialog
+                        applicationType={application.applicationType}
                         contact={link.contact}
                         trigger={<Button variant="outline" size="sm">Edit</Button>}
                         onSave={async (data) => {
@@ -1198,10 +1301,14 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
             <EmptyState
               icon={Users}
               title="No contacts linked"
-              description="Link recruiters, referrals, alumni, or interviewers related to this application."
+              description={
+                isUniversity
+                  ? "Link admissions officers, professors, recommenders, or program contacts related to this application."
+                  : "Link recruiters, referrals, alumni, or interviewers related to this application."
+              }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <LinkContactDialog applicationId={application.id} contacts={contacts} />
+                  <LinkContactDialog applicationId={application.id} applicationType={application.applicationType} contacts={contacts} />
                   {createContactButton}
                 </div>
               }
@@ -1212,10 +1319,14 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
         <TabsContent value="documents" className="space-y-5">
           <TabHeader
             title="Documents"
-            description="Track resumes, cover letters, transcripts, portfolios, and files used for this application."
+            description={
+              isUniversity
+                ? "Track statements, transcripts, recommendations, test scores, and scholarship materials."
+                : "Track resumes, cover letters, transcripts, portfolios, and files used for this application."
+            }
             actions={
               <>
-                <LinkDocumentDialog applicationId={application.id} documents={documents} />
+                <LinkDocumentDialog applicationId={application.id} applicationType={application.applicationType} documents={documents} />
                 {addDocumentButton}
               </>
             }
@@ -1241,6 +1352,7 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
                     {link.notes ? <p className="text-sm text-muted-foreground">Application note: {link.notes}</p> : null}
                     <div className="flex flex-wrap gap-2">
                       <DocumentDialog
+                        applicationType={application.applicationType}
                         document={link.document}
                         trigger={<Button variant="outline" size="sm">Edit</Button>}
                         onSave={async (data) => {
@@ -1280,10 +1392,14 @@ export function ApplicationWorkspace({ application, contacts, documents, initial
             <EmptyState
               icon={FileText}
               title="No documents linked"
-              description="Attach the resume, cover letter, transcript, or portfolio used for this application."
+              description={
+                isUniversity
+                  ? "Attach the statement, transcript, recommendation, test score, or scholarship material for this application."
+                  : "Attach the resume, cover letter, transcript, or portfolio used for this application."
+              }
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <LinkDocumentDialog applicationId={application.id} documents={documents} />
+                  <LinkDocumentDialog applicationId={application.id} applicationType={application.applicationType} documents={documents} />
                   {addDocumentButton}
                 </div>
               }

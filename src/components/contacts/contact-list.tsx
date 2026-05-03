@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RELATIONSHIP_TYPE_LABELS } from "@/constants/app";
+import { getApplicationPrimaryTitle, RELATIONSHIP_TYPE_LABELS } from "@/constants/app";
 import { formatDate } from "@/lib/utils/date";
 import type { RelationshipType } from "@prisma/client";
 
@@ -17,6 +17,9 @@ type ContactItem = {
       id: string;
       companyName: string;
       roleTitle: string;
+      applicationType?: "JOB" | "UNIVERSITY";
+      jobDetail?: { companyName: string; roleTitle: string } | null;
+      universityDetail?: { institutionName: string; programName: string } | null;
     };
   }[];
 };
@@ -35,7 +38,7 @@ export function ContactList({ contacts }: { contacts: ContactItem[] }) {
             <p className="text-muted-foreground">{contact.email ?? "No email"}</p>
             <p className="text-muted-foreground">Follow-up: {formatDate(contact.followUpDate)}</p>
             <p className="text-sm text-muted-foreground">
-              Linked applications: {contact.applications.map((a) => a.application.companyName).join(", ") || "None"}
+              Linked applications: {contact.applications.map((a) => getApplicationPrimaryTitle(a.application)).join(", ") || "None"}
             </p>
           </CardContent>
         </Card>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApplications } from "@/lib/services/applications";
 import { toApplicationsCsv } from "@/lib/csv/applications";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
 import { unauthorizedResponse } from "@/lib/http";
 
 export async function GET() {
@@ -10,12 +11,13 @@ export async function GET() {
   if (!session?.user?.id) {
     return unauthorizedResponse();
   }
-  const apps = await getApplications(session.user.id, { includeArchived: true });
+  const mode = await getCurrentApplicationMode(session.user.id);
+  const apps = await getApplications(session.user.id, { includeArchived: true, applicationType: mode });
   const csv = toApplicationsCsv(apps);
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition": 'attachment; filename="applications.csv"',
+      "Content-Disposition": `attachment; filename="${mode === "UNIVERSITY" ? "university-applications" : "job-applications"}.csv"`,
     },
   });
 }

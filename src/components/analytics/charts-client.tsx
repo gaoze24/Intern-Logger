@@ -17,11 +17,12 @@ import {
 import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import { AnalyticsChartCard } from "@/components/analytics/chart-card";
 import { EmptyState } from "@/components/common/empty-state";
+import { STATUS_LABELS } from "@/constants/app";
 
 export function StatusPieChart({ data }: { data: Record<string, number> }) {
   const rows = Object.entries(data)
     .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name, value }));
+    .map(([name, value]) => ({ name: STATUS_LABELS[name as keyof typeof STATUS_LABELS] ?? name, value }));
   return (
     <AnalyticsChartCard title="Applications by status">
       {rows.length === 0 ? (
@@ -75,7 +76,9 @@ export function MonthlyBarChart({ data }: { data: Record<string, number> }) {
 }
 
 export function FunnelStatusChart({ data }: { data: { status: string; count: number }[] }) {
-  const rows = data.filter((item) => item.count > 0);
+  const rows = data
+    .filter((item) => item.count > 0)
+    .map((item) => ({ ...item, status: STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] ?? item.status }));
   return (
     <AnalyticsChartCard title="Status funnel">
       {rows.length === 0 ? (

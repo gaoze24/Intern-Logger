@@ -6,6 +6,7 @@ function app(overrides: Partial<Application>): Application {
   return {
     id: "1",
     userId: "u1",
+    applicationType: "JOB",
     companyName: "Google",
     roleTitle: "Software Engineer Intern",
     department: null,

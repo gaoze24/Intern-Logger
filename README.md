@@ -1,6 +1,6 @@
-# Internship Application Tracker
+# Application Tracker
 
-A production-oriented internship application tracker for students managing high-volume recruiting pipelines.  
+A production-oriented application tracker for managing job, internship, and university application pipelines.
 Built with Next.js App Router, TypeScript, Prisma, PostgreSQL, and NextAuth.
 
 ## Tech Stack
@@ -16,7 +16,8 @@ Built with Next.js App Router, TypeScript, Prisma, PostgreSQL, and NextAuth.
 
 ## Features
 
-- Dashboard with pipeline metrics, deadlines, interviews, and insights
+- Mode switch for Job Applications and University Applications
+- Dashboard with pipeline metrics, deadlines, interviews, decisions, and insights
 - Applications management:
   - Table + compact list views
   - Filters/search
@@ -79,7 +80,7 @@ npm install
 2. Configure environment variables in `.env`:
 
 ```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/intern_tracker?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/application_tracker?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="replace-with-long-random-secret"
 ```

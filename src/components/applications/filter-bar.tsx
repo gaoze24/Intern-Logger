@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SearchParamInput } from "@/components/common/search-param-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { APPLICATION_STATUS_OPTIONS } from "@/constants/app";
+import { getModeLabels, getStatusOptions, type ApplicationMode } from "@/constants/app";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
@@ -15,43 +15,45 @@ import type {
   ApplicationSortOrder,
 } from "@/lib/services/applications";
 
-const SORT_OPTIONS: { value: `${ApplicationSortKey}:${ApplicationSortOrder}`; label: string }[] = [
-  { value: "deadline:asc", label: "Deadline: soonest first" },
-  { value: "deadline:desc", label: "Deadline: latest first" },
-  { value: "appliedDate:desc", label: "Applied date: newest first" },
-  { value: "appliedDate:asc", label: "Applied date: oldest first" },
-  { value: "updatedAt:desc", label: "Last updated: newest first" },
-  { value: "updatedAt:asc", label: "Last updated: oldest first" },
-  { value: "companyName:asc", label: "Company: A to Z" },
-  { value: "companyName:desc", label: "Company: Z to A" },
-  { value: "roleTitle:asc", label: "Role: A to Z" },
-  { value: "roleTitle:desc", label: "Role: Z to A" },
-  { value: "priority:desc", label: "Priority: high to low" },
-  { value: "priority:asc", label: "Priority: low to high" },
-  { value: "status:asc", label: "Status: pipeline order" },
-  { value: "createdAt:desc", label: "Created date: newest first" },
-  { value: "createdAt:asc", label: "Created date: oldest first" },
-];
-
 type ApplicationsFilterBarProps = {
   tab: ApplicationListTab;
   counts: ApplicationCounts;
+  mode: ApplicationMode;
   sort: ApplicationSortKey;
   order: ApplicationSortOrder;
 };
 
-export function ApplicationsFilterBar({ tab, counts, sort, order }: ApplicationsFilterBarProps) {
+export function ApplicationsFilterBar({ tab, counts, mode, sort, order }: ApplicationsFilterBarProps) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const labels = getModeLabels(mode);
 
   const statusValue = params.get("status") ?? "ALL";
   const viewValue = params.get("view") ?? "table";
   const sortValue = `${sort}:${order}` as const;
 
-  const statuses = useMemo(
-    () => APPLICATION_STATUS_OPTIONS.filter((option) => tab !== "active" || option.value !== "ARCHIVED"),
-    [tab],
+  const statuses = useMemo(() => getStatusOptions(mode).filter((option) => tab !== "active" || option.value !== "ARCHIVED"), [mode, tab]);
+  const sortOptions = useMemo(
+    () =>
+      [
+        { value: "deadline:asc", label: "Deadline: soonest first" },
+        { value: "deadline:desc", label: "Deadline: latest first" },
+        { value: "appliedDate:desc", label: `${labels.submittedField} date: newest first` },
+        { value: "appliedDate:asc", label: `${labels.submittedField} date: oldest first` },
+        { value: "updatedAt:desc", label: "Last updated: newest first" },
+        { value: "updatedAt:asc", label: "Last updated: oldest first" },
+        { value: "companyName:asc", label: `${labels.primaryField}: A to Z` },
+        { value: "companyName:desc", label: `${labels.primaryField}: Z to A` },
+        { value: "roleTitle:asc", label: `${labels.secondaryField}: A to Z` },
+        { value: "roleTitle:desc", label: `${labels.secondaryField}: Z to A` },
+        { value: "priority:desc", label: "Priority: high to low" },
+        { value: "priority:asc", label: "Priority: low to high" },
+        { value: "status:asc", label: "Status: pipeline order" },
+        { value: "createdAt:desc", label: "Created date: newest first" },
+        { value: "createdAt:asc", label: "Created date: oldest first" },
+      ] as { value: `${ApplicationSortKey}:${ApplicationSortOrder}`; label: string }[],
+    [labels.primaryField, labels.secondaryField, labels.submittedField],
   );
 
   const hrefWith = (updates: Record<string, string | undefined>) => {
@@ -110,7 +112,7 @@ export function ApplicationsFilterBar({ tab, counts, sort, order }: Applications
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[280px] flex-1">
-          <SearchParamInput placeholder="Search company, role, notes..." />
+          <SearchParamInput placeholder={labels.searchPlaceholder} />
         </div>
 
         <Select value={statusValue} onValueChange={(value) => updateParam("status", value ?? "")}>
@@ -132,7 +134,7 @@ export function ApplicationsFilterBar({ tab, counts, sort, order }: Applications
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
-            {SORT_OPTIONS.map((option) => (
+            {sortOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

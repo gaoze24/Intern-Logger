@@ -80,7 +80,7 @@ function CardGridSkeleton({ count = 6 }: { count?: number }) {
 
 export function DashboardLoading() {
   return (
-    <PageShell title="Dashboard" description="Overview of your internship application pipeline">
+    <PageShell title="Dashboard" description="Overview of your application pipeline">
       <div className="space-y-5">
         <MetricGridSkeleton />
         <ChartGridSkeleton />
@@ -92,7 +92,7 @@ export function DashboardLoading() {
 
 export function ApplicationsLoading() {
   return (
-    <PageShell title="Applications" description="Track, filter, and manage your internship applications">
+    <PageShell title="Applications" description="Track, filter, and manage your applications">
       <div className="space-y-5">
         <div className="flex flex-wrap gap-3">
           <Skeleton className="h-10 w-80" />
@@ -147,7 +147,7 @@ export function CalendarLoading() {
 
 export function TasksLoading() {
   return (
-    <PageShell title="Tasks" description="Global tasks across all internship applications">
+    <PageShell title="Tasks" description="Global tasks across your selected application mode">
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="h-32 w-full rounded-xl" />
@@ -159,7 +159,7 @@ export function TasksLoading() {
 
 export function ContactsLoading() {
   return (
-    <PageShell title="Contacts / Networking" description="Track recruiters, alumni, referrals, and interviewers">
+    <PageShell title="Contacts / Networking" description="Track people connected to your applications">
       <div className="space-y-5">
         <Skeleton className="h-10 w-80" />
         <CardGridSkeleton />
@@ -170,7 +170,7 @@ export function ContactsLoading() {
 
 export function DocumentsLoading() {
   return (
-    <PageShell title="Documents" description="Track resume versions, cover letters, and supporting links">
+    <PageShell title="Documents" description="Track documents and supporting links">
       <CardGridSkeleton />
     </PageShell>
   );

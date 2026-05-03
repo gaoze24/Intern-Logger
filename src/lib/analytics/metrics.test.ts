@@ -6,6 +6,7 @@ function mockApp(status: ApplicationWithRelations["status"]): ApplicationWithRel
   return {
     id: Math.random().toString(),
     userId: "u1",
+    applicationType: "JOB",
     companyName: "X",
     roleTitle: "Y",
     department: null,

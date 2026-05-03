@@ -2,6 +2,8 @@ import { PageShell } from "@/components/layout/page-shell";
 import { TaskList } from "@/components/tasks/task-list";
 import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
 import { getTasks } from "@/lib/services/entities";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
+import { getModeLabels } from "@/constants/app";
 import { PaginationControls } from "@/components/common/pagination-controls";
 
 const VALID_PAGE_SIZES = new Set([25, 50, 100]);
@@ -27,14 +29,17 @@ export default async function TasksPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const userId = await getCurrentUserIdOrRedirect();
+  const mode = await getCurrentApplicationMode(userId);
+  const labels = getModeLabels(mode);
   const params = await searchParams;
   const tasks = await getTasks(userId, {
+    applicationType: mode,
     page: getPage(getParam(params, "page")),
     pageSize: getPageSize(getParam(params, "pageSize")),
   });
 
   return (
-    <PageShell title="Tasks" description="Global tasks across all internship applications">
+    <PageShell title="Tasks" description={`Tasks for your ${labels.modeLabel.toLowerCase()}`}>
       <div className="space-y-5">
         <TaskList tasks={tasks.items} />
         <PaginationControls

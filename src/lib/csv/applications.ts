@@ -4,25 +4,41 @@ import type { Application, Prisma } from "@prisma/client";
 export type ImportRow = Partial<Record<keyof Application | "tags", string>>;
 
 const IMPORTABLE_COLUMNS = [
+  "applicationType",
   "companyName",
   "roleTitle",
+  "institutionName",
+  "programName",
+  "degreeLevel",
   "department",
+  "facultyOrDepartment",
   "location",
   "country",
+  "campus",
   "workMode",
   "status",
   "priority",
   "source",
   "applicationUrl",
   "jobPostingUrl",
+  "programUrl",
+  "applicationPortalUrl",
   "deadline",
   "appliedDate",
+  "submittedDate",
   "season",
   "applicationYear",
+  "intakeTerm",
+  "intakeYear",
+  "applicationRound",
   "compensation",
+  "tuitionEstimate",
   "visaSponsorship",
   "referralUsed",
+  "scholarshipApplied",
+  "fundingStatus",
   "jobDescription",
+  "statementPrompt",
   "notes",
   "tags",
 ] as const;
@@ -69,11 +85,45 @@ export function toApplicationsCsv(
   applications: Array<
     Application & {
       tags: { tag: { name: string } }[];
+      jobDetail?: { companyName: string; roleTitle: string } | null;
+      universityDetail?: {
+        institutionName: string;
+        programName: string;
+        degreeLevel: string | null;
+        facultyOrDepartment: string | null;
+        campus: string | null;
+        programUrl: string | null;
+        applicationPortalUrl: string | null;
+        intakeTerm: string | null;
+        intakeYear: number | null;
+        applicationRound: string | null;
+        tuitionEstimate: string | null;
+        scholarshipApplied: boolean;
+        fundingStatus: string | null;
+        statementPrompt: string | null;
+      } | null;
     }
   >,
 ) {
   const rows = applications.map((app) => ({
     ...app,
+    companyName: app.jobDetail?.companyName ?? app.companyName,
+    roleTitle: app.jobDetail?.roleTitle ?? app.roleTitle,
+    institutionName: app.universityDetail?.institutionName ?? "",
+    programName: app.universityDetail?.programName ?? "",
+    degreeLevel: app.universityDetail?.degreeLevel ?? "",
+    facultyOrDepartment: app.universityDetail?.facultyOrDepartment ?? "",
+    campus: app.universityDetail?.campus ?? "",
+    programUrl: app.universityDetail?.programUrl ?? "",
+    applicationPortalUrl: app.universityDetail?.applicationPortalUrl ?? "",
+    submittedDate: app.applicationType === "UNIVERSITY" ? app.appliedDate : "",
+    intakeTerm: app.universityDetail?.intakeTerm ?? "",
+    intakeYear: app.universityDetail?.intakeYear ?? "",
+    applicationRound: app.universityDetail?.applicationRound ?? "",
+    tuitionEstimate: app.universityDetail?.tuitionEstimate ?? "",
+    scholarshipApplied: app.universityDetail?.scholarshipApplied ?? "",
+    fundingStatus: app.universityDetail?.fundingStatus ?? "",
+    statementPrompt: app.universityDetail?.statementPrompt ?? "",
     tags: app.tags.map((t) => t.tag.name).join("|"),
   }));
   return Papa.unparse(rows, { columns: [...IMPORTABLE_COLUMNS] });

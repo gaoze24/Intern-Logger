@@ -6,6 +6,7 @@ function makeBase(overrides: Partial<ApplicationWithRelations>): ApplicationWith
   return {
     id: "a1",
     userId: "u1",
+    applicationType: "JOB",
     companyName: "Meta",
     roleTitle: "SWE Intern",
     department: null,

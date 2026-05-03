@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createTask, getTasks } from "@/lib/services/entities";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
 import { apiError, parseJsonBody, unauthorizedResponse } from "@/lib/http";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return unauthorizedResponse();
-  const data = await getTasks(session.user.id);
+  const mode = await getCurrentApplicationMode(session.user.id);
+  const data = await getTasks(session.user.id, { applicationType: mode });
   return NextResponse.json({ data });
 }
 
@@ -15,8 +17,9 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return unauthorizedResponse();
   try {
+    const mode = await getCurrentApplicationMode(session.user.id);
     const payload = await parseJsonBody(request);
-    const data = await createTask(session.user.id, payload);
+    const data = await createTask(session.user.id, { applicationType: mode, ...(payload as Record<string, unknown>) });
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
     return apiError(error);

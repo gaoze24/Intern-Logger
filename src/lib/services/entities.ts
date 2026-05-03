@@ -1,4 +1,4 @@
-import { ActivityEntityType, Prisma, TimelineEventType } from "@prisma/client";
+import { ActivityEntityType, ApplicationType, Prisma, TimelineEventType } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   contactSchema,
@@ -19,19 +19,35 @@ export type PaginatedResult<T> = {
 };
 
 type PaginationOptions = {
+  applicationType?: ApplicationType;
   page?: number;
   pageSize?: number;
 };
 
 const taskListInclude = {
-  application: { select: { companyName: true, roleTitle: true } },
+  application: {
+    select: {
+      applicationType: true,
+      companyName: true,
+      roleTitle: true,
+      jobDetail: { select: { companyName: true, roleTitle: true } },
+      universityDetail: { select: { institutionName: true, programName: true } },
+    },
+  },
 } satisfies Prisma.TaskInclude;
 
 const contactListInclude = {
   applications: {
     include: {
       application: {
-        select: { id: true, companyName: true, roleTitle: true },
+        select: {
+          id: true,
+          applicationType: true,
+          companyName: true,
+          roleTitle: true,
+          jobDetail: { select: { companyName: true, roleTitle: true } },
+          universityDetail: { select: { institutionName: true, programName: true } },
+        },
       },
     },
   },
@@ -41,7 +57,14 @@ const documentListInclude = {
   applications: {
     include: {
       application: {
-        select: { id: true, companyName: true, roleTitle: true },
+        select: {
+          id: true,
+          applicationType: true,
+          companyName: true,
+          roleTitle: true,
+          jobDetail: { select: { companyName: true, roleTitle: true } },
+          universityDetail: { select: { institutionName: true, programName: true } },
+        },
       },
     },
   },
@@ -179,18 +202,28 @@ export async function getInterviews(userId: string) {
     where: { userId },
     orderBy: { scheduledAt: "asc" },
     include: {
-      application: { select: { companyName: true, roleTitle: true } },
+      application: {
+        select: {
+          applicationType: true,
+          companyName: true,
+          roleTitle: true,
+          jobDetail: { select: { companyName: true, roleTitle: true } },
+          universityDetail: { select: { institutionName: true, programName: true } },
+        },
+      },
     },
   });
 }
 
 export async function createTask(userId: string, input: unknown) {
   const parsed = taskSchema.parse(input);
+  let applicationType = parsed.applicationType ?? ApplicationType.JOB;
   if (parsed.applicationId) {
     const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
     if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+    applicationType = app.applicationType;
   }
-  const task = await db.task.create({ data: { ...parsed, userId } });
+  const task = await db.task.create({ data: { ...parsed, applicationType, userId } });
   if (parsed.applicationId) {
     await createTimelineEvent({
       userId,
@@ -214,9 +247,15 @@ export async function updateTask(userId: string, id: string, input: unknown) {
   const parsed = taskSchema.partial().parse(input);
   const task = await db.task.findFirst({ where: { id, userId } });
   if (!task) throw appError("NOT_FOUND", "This task no longer exists.", { status: 404 });
+  let applicationType = parsed.applicationType ?? task.applicationType;
+  if (parsed.applicationId) {
+    const app = await db.application.findFirst({ where: { id: parsed.applicationId, userId } });
+    if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
+    applicationType = app.applicationType;
+  }
   const updated = await db.task.update({
     where: { id },
-    data: parsed,
+    data: { ...parsed, applicationType },
   });
   await createActivityLog({
     userId,
@@ -282,7 +321,7 @@ export async function deleteTask(userId: string, id: string) {
 
 export async function getTasks(userId: string, options: PaginationOptions = {}): Promise<PaginatedResult<TaskListItem>> {
   const { page, pageSize, skip } = normalizePagination(options);
-  const where = { userId };
+  const where = { userId, applicationType: options.applicationType };
   const [total, items] = await Promise.all([
     db.task.count({ where }),
     db.task.findMany({
@@ -304,6 +343,7 @@ export async function getContacts(
   const { page, pageSize, skip } = normalizePagination(options);
   const where = {
     userId,
+    applicationType: options.applicationType,
     OR: options.search
       ? [
           { name: { contains: options.search, mode: "insensitive" as const } },
@@ -364,6 +404,9 @@ export async function linkContactToApplication(
   const contact = await db.contact.findFirst({ where: { id: contactId, userId } });
   if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   if (!contact) throw appError("NOT_FOUND", "The selected contact could not be linked because it no longer exists.", { status: 404 });
+  if (contact.applicationType !== app.applicationType) {
+    throw appError("LINK_FAILED", "This contact belongs to a different application mode.");
+  }
   const link = await db.applicationContact.upsert({
     where: { applicationId_contactId: { applicationId, contactId } },
     update: { relationshipToApplication },
@@ -446,7 +489,7 @@ export async function getDocuments(
   options: PaginationOptions = {},
 ): Promise<PaginatedResult<DocumentListItem>> {
   const { page, pageSize, skip } = normalizePagination(options);
-  const where = { userId };
+  const where = { userId, applicationType: options.applicationType };
   const [total, items] = await Promise.all([
     db.document.count({ where }),
     db.document.findMany({
@@ -471,6 +514,9 @@ export async function linkDocumentToApplication(
   const document = await db.document.findFirst({ where: { id: documentId, userId } });
   if (!app) throw appError("NOT_FOUND", "This application no longer exists.", { status: 404 });
   if (!document) throw appError("NOT_FOUND", "The selected document could not be linked because it no longer exists.", { status: 404 });
+  if (document.applicationType !== app.applicationType) {
+    throw appError("LINK_FAILED", "This document belongs to a different application mode.");
+  }
   const link = await db.applicationDocument.upsert({
     where: { applicationId_documentId: { applicationId, documentId } },
     update: { usageType, notes },

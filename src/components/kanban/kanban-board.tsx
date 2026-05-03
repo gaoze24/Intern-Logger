@@ -11,12 +11,21 @@ import type { KanbanApplicationItem } from "@/lib/services/applications";
 import { changeApplicationStatusAction } from "@/actions/applications";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { STATUS_LABELS, PRIORITY_OPTIONS } from "@/constants/app";
+import {
+  DEGREE_LEVEL_LABELS,
+  getApplicationPrimaryTitle,
+  getApplicationSecondaryTitle,
+  getModeLabels,
+  getStatusOptions,
+  STATUS_LABELS,
+  PRIORITY_OPTIONS,
+  type ApplicationMode,
+} from "@/constants/app";
 import { PriorityBadge } from "@/components/applications/priority-badge";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils";
 
-const COLUMNS: ApplicationStatusType[] = [
+const JOB_COLUMNS: ApplicationStatusType[] = [
   "WISHLIST",
   "PREPARING",
   "APPLIED",
@@ -31,12 +40,29 @@ const COLUMNS: ApplicationStatusType[] = [
   "ARCHIVED",
 ];
 
-const CLOSED_STAGES: ApplicationStatusType[] = ["REJECTED", "WITHDRAWN", "ARCHIVED"];
+const UNIVERSITY_COLUMNS: ApplicationStatusType[] = [
+  "RESEARCHING",
+  "PREPARING",
+  "DOCUMENTS_PENDING",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "INTERVIEW",
+  "WAITLISTED",
+  "ACCEPTED",
+  "REJECTED",
+  "DEFERRED",
+  "WITHDRAWN",
+  "ARCHIVED",
+];
+
+const JOB_CLOSED_STAGES: ApplicationStatusType[] = ["REJECTED", "WITHDRAWN", "ARCHIVED"];
+const UNIVERSITY_CLOSED_STAGES: ApplicationStatusType[] = ["ACCEPTED", "REJECTED", "DEFERRED", "WITHDRAWN", "ARCHIVED"];
 
 type KanbanColumnProps = {
   status: ApplicationStatusType;
   applications: KanbanApplicationItem[];
   allApplications: KanbanApplicationItem[];
+  mode: ApplicationMode;
   pending: boolean;
   draggingId: string | null;
   onMove: (id: string, status: ApplicationStatusType) => void;
@@ -58,6 +84,7 @@ function EmptyKanbanColumn() {
 
 function KanbanCard({
   application,
+  mode,
   pending,
   draggingId,
   onMove,
@@ -65,6 +92,7 @@ function KanbanCard({
   onDragEnd,
 }: {
   application: KanbanApplicationItem;
+  mode: ApplicationMode;
   pending: boolean;
   draggingId: string | null;
   onMove: (id: string, status: ApplicationStatusType) => void;
@@ -83,8 +111,8 @@ function KanbanCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h4 className="truncate font-semibold text-foreground">{application.companyName}</h4>
-          <p className="truncate text-xs text-muted-foreground">{application.roleTitle}</p>
+          <h4 className="truncate font-semibold text-foreground">{getApplicationPrimaryTitle(application)}</h4>
+          <p className="truncate text-xs text-muted-foreground">{getApplicationSecondaryTitle(application)}</p>
         </div>
         <PriorityBadge priority={application.priority} />
       </div>
@@ -92,8 +120,15 @@ function KanbanCard({
       <div className="mt-3 flex flex-col gap-1.5 text-xs text-muted-foreground">
         <div className="flex min-w-0 items-center gap-1.5">
           <MapPin className="size-3.5 shrink-0" />
-          <span className="truncate">{application.location || "No location"}</span>
+          <span className="truncate">
+            {mode === "UNIVERSITY" ? application.country || "No country" : application.location || "No location"}
+          </span>
         </div>
+        {mode === "UNIVERSITY" && application.universityDetail?.degreeLevel ? (
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{DEGREE_LEVEL_LABELS[application.universityDetail.degreeLevel]}</span>
+          </div>
+        ) : null}
         <div className="flex min-w-0 items-center gap-1.5">
           <CalendarDays className="size-3.5 shrink-0" />
           <span className="truncate">{application.deadline ? formatDate(application.deadline) : "No deadline"}</span>
@@ -102,7 +137,7 @@ function KanbanCard({
 
       <div className="mt-3">
         <label className="sr-only" htmlFor={`move-${application.id}`}>
-          Move {application.companyName}
+          Move {getApplicationPrimaryTitle(application)}
         </label>
         <select
           id={`move-${application.id}`}
@@ -111,9 +146,9 @@ function KanbanCard({
           onChange={(event) => onMove(application.id, event.target.value as ApplicationStatusType)}
           className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
         >
-          {COLUMNS.map((target) => (
-            <option key={target} value={target}>
-              Move to {STATUS_LABELS[target]}
+          {getStatusOptions(mode).map((target) => (
+            <option key={target.value} value={target.value}>
+              Move to {target.label}
             </option>
           ))}
         </select>
@@ -126,6 +161,7 @@ function KanbanColumn({
   status,
   applications,
   allApplications,
+  mode,
   pending,
   draggingId,
   onMove,
@@ -169,6 +205,7 @@ function KanbanColumn({
             <KanbanCard
               key={application.id}
               application={application}
+              mode={mode}
               pending={pending}
               draggingId={draggingId}
               onMove={onMove}
@@ -184,8 +221,11 @@ function KanbanColumn({
   );
 }
 
-export function KanbanBoard({ applications }: { applications: KanbanApplicationItem[] }) {
+export function KanbanBoard({ applications, mode = "JOB" }: { applications: KanbanApplicationItem[]; mode?: ApplicationMode }) {
   const router = useRouter();
+  const labels = getModeLabels(mode);
+  const columns = mode === "UNIVERSITY" ? UNIVERSITY_COLUMNS : JOB_COLUMNS;
+  const closedStages = mode === "UNIVERSITY" ? UNIVERSITY_CLOSED_STAGES : JOB_CLOSED_STAGES;
   const [pending, startTransition] = useTransition();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -193,8 +233,8 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
   const [showClosedStages, setShowClosedStages] = useState(false);
 
   const visibleColumns = useMemo(
-    () => (showClosedStages ? COLUMNS : COLUMNS.filter((column) => !CLOSED_STAGES.includes(column))),
-    [showClosedStages]
+    () => (showClosedStages ? columns : columns.filter((column) => !closedStages.includes(column))),
+    [closedStages, columns, showClosedStages]
   );
 
   const filteredApplications = useMemo(() => {
@@ -202,8 +242,9 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
     return applications.filter((application) => {
       const matchesSearch =
         !term ||
-        application.companyName.toLowerCase().includes(term) ||
-        application.roleTitle.toLowerCase().includes(term) ||
+        getApplicationPrimaryTitle(application).toLowerCase().includes(term) ||
+        getApplicationSecondaryTitle(application).toLowerCase().includes(term) ||
+        Boolean(application.country?.toLowerCase().includes(term)) ||
         Boolean(application.location?.toLowerCase().includes(term));
       const matchesPriority = priority === "ALL" || application.priority === priority;
       return matchesSearch && matchesPriority;
@@ -223,7 +264,7 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
   const move = (id: string, status: ApplicationStatusType) => {
     const application = applications.find((item) => item.id === id);
     if (!application || application.status === status) return;
-    if (CLOSED_STAGES.includes(status)) {
+    if (closedStages.includes(status)) {
       const yes = window.confirm(`Move application to ${STATUS_LABELS[status]}?`);
       if (!yes) return;
     }
@@ -253,7 +294,7 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search applications"
+            placeholder={labels.searchPlaceholder}
             className="h-9 pl-9 text-sm"
           />
         </div>
@@ -285,7 +326,7 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
           </label>
           <Link href="/applications/new" className={buttonVariants({ size: "sm" })}>
             <Plus className="size-4" />
-            Add Application
+            {labels.add}
           </Link>
         </div>
       </div>
@@ -298,6 +339,7 @@ export function KanbanBoard({ applications }: { applications: KanbanApplicationI
               status={column}
               applications={applicationsByStatus[column] ?? []}
               allApplications={applications}
+              mode={mode}
               pending={pending}
               draggingId={draggingId}
               onMove={move}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ApplicationType,
   DocumentType,
   InterviewOutcome,
   InterviewType,
@@ -47,6 +48,7 @@ export const interviewSchema = z.object({
 });
 
 export const taskSchema = z.object({
+  applicationType: z.nativeEnum(ApplicationType).default(ApplicationType.JOB),
   applicationId: z.string().optional().nullable(),
   title: z.string().trim().min(1, "Task title is required."),
   description: optionalString,
@@ -56,6 +58,7 @@ export const taskSchema = z.object({
 });
 
 export const contactSchema = z.object({
+  applicationType: z.nativeEnum(ApplicationType).default(ApplicationType.JOB),
   name: z.string().trim().min(1, "Contact name is required."),
   company: optionalString,
   role: optionalString,
@@ -69,6 +72,7 @@ export const contactSchema = z.object({
 });
 
 export const documentSchema = z.object({
+  applicationType: z.nativeEnum(ApplicationType).default(ApplicationType.JOB),
   name: z.string().trim().min(1, "Document name is required."),
   type: z.nativeEnum(DocumentType),
   url: z.string().trim().min(1, "Document URL is required.").url("Enter a valid document URL."),

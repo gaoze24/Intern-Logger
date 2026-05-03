@@ -15,6 +15,9 @@ type DocumentItem = {
       id: string;
       companyName: string;
       roleTitle: string;
+      applicationType?: "JOB" | "UNIVERSITY";
+      jobDetail?: { companyName: string; roleTitle: string } | null;
+      universityDetail?: { institutionName: string; programName: string } | null;
     };
   }[];
 };

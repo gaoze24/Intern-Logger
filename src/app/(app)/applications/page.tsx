@@ -16,6 +16,8 @@ import {
 } from "@/lib/services/applications";
 import { buttonVariants } from "@/components/ui/button";
 import { PaginationControls } from "@/components/common/pagination-controls";
+import { getModeLabels, isStatusAllowedForMode } from "@/constants/app";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
 
 const VALID_PAGE_SIZES = new Set([25, 50, 100]);
 
@@ -34,8 +36,10 @@ function getPageSizeParam(value: string | undefined) {
   return VALID_PAGE_SIZES.has(pageSize) ? pageSize : 25;
 }
 
-function getStatusParam(value: string | undefined) {
-  return value && Object.values(ApplicationStatusType).includes(value as ApplicationStatusType)
+function getStatusParam(value: string | undefined, mode: "JOB" | "UNIVERSITY") {
+  return value &&
+    Object.values(ApplicationStatusType).includes(value as ApplicationStatusType) &&
+    isStatusAllowedForMode(value as ApplicationStatusType, mode)
     ? (value as ApplicationStatusType)
     : undefined;
 }
@@ -46,12 +50,14 @@ export default async function ApplicationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const userId = await getCurrentUserIdOrRedirect();
+  const mode = await getCurrentApplicationMode(userId);
+  const labels = getModeLabels(mode);
   const params = await searchParams;
   const viewParam = getStringParam(params, "view");
   const view = viewParam === "compact" || viewParam === "kanban" ? viewParam : "table";
   if (view === "kanban") redirect("/kanban");
   const tab = normalizeApplicationTab(getStringParam(params, "tab"));
-  const statusParam = getStatusParam(getStringParam(params, "status"));
+  const statusParam = getStatusParam(getStringParam(params, "status"), mode);
   const status = tab === "active" && statusParam === ApplicationStatusType.ARCHIVED ? undefined : statusParam;
   const search = getStringParam(params, "search");
   const { sort, order } = normalizeApplicationSort(getStringParam(params, "sort"), getStringParam(params, "order"));
@@ -61,6 +67,7 @@ export default async function ApplicationsPage({
 
   const [applications, counts] = await Promise.all([
     getApplicationsList(userId, {
+      applicationType: mode,
       tab,
       search,
       statuses,
@@ -70,6 +77,7 @@ export default async function ApplicationsPage({
       pageSize,
     }),
     getApplicationCounts(userId, {
+      applicationType: mode,
       search,
       statuses,
     }),
@@ -101,13 +109,13 @@ export default async function ApplicationsPage({
           }
         : applications.items.length === 0
           ? {
-              title: "No active applications",
-              description: "Add an internship application to start tracking your recruiting pipeline.",
+              title: labels.emptyTitle,
+              description: labels.emptyDescription,
               icon: BriefcaseBusiness,
               action: (
                 <Link href="/applications/new" className={`${buttonVariants()} mt-2`}>
                   <Plus className="mr-1 size-4" />
-                  Add application
+                  {labels.add}
                 </Link>
               ),
             }
@@ -124,17 +132,17 @@ export default async function ApplicationsPage({
 
   return (
     <PageShell
-      title="Applications"
-      description="Track, filter, and manage your internship applications"
+      title={labels.modeLabel}
+      description={labels.applicationsDescription}
       actions={
         <Link href="/applications/new" className={buttonVariants()}>
           <Plus className="mr-1 size-4" />
-          Add Application
+          {labels.add}
         </Link>
       }
     >
       <div className="space-y-5">
-        <ApplicationsFilterBar tab={tab} counts={counts} sort={sort} order={order} />
+        <ApplicationsFilterBar tab={tab} counts={counts} mode={mode} sort={sort} order={order} />
         {emptyState ? (
           <EmptyState
             title={emptyState.title}
@@ -145,7 +153,7 @@ export default async function ApplicationsPage({
         ) : null}
 
         {view === "table" && applications.items.length > 0 ? (
-          <ApplicationTable applications={applications.items} showArchivedAt={tab !== "active"} />
+          <ApplicationTable applications={applications.items} mode={mode} showArchivedAt={tab !== "active"} />
         ) : null}
         {view === "compact" && applications.items.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

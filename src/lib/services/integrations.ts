@@ -21,7 +21,7 @@ export class LocalCalendarService implements CalendarService {
   async deleteEvent() {}
 
   async exportICS(events: { title: string; startsAt: Date; endsAt?: Date; description?: string }[]) {
-    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Internship Tracker//EN"];
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Application Tracker//EN"];
     for (const event of events) {
       lines.push("BEGIN:VEVENT");
       lines.push(`UID:${crypto.randomUUID()}`);

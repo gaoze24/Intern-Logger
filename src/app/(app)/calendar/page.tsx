@@ -2,23 +2,26 @@ import { PageShell } from "@/components/layout/page-shell";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { getCurrentUserIdOrRedirect } from "@/lib/server-user";
 import { getUpcomingEvents } from "@/lib/services/dashboard";
+import { getCurrentApplicationMode } from "@/lib/services/settings";
+import { getApplicationPrimaryTitle } from "@/constants/app";
 
 export default async function CalendarPage() {
   const userId = await getCurrentUserIdOrRedirect();
-  const upcoming = await getUpcomingEvents(userId);
+  const mode = await getCurrentApplicationMode(userId);
+  const upcoming = await getUpcomingEvents(userId, mode);
 
   const events = [
     ...upcoming.deadlines
       .filter((deadline) => deadline.deadline)
       .map((deadline) => ({
         id: deadline.id,
-        title: `${deadline.companyName} deadline`,
+        title: `${getApplicationPrimaryTitle(deadline)} deadline`,
         date: deadline.deadline!,
         type: "deadline" as const,
       })),
     ...upcoming.interviews.map((interview) => ({
       id: interview.id,
-      title: `${interview.application.companyName} · ${interview.title}`,
+      title: `${getApplicationPrimaryTitle(interview.application)} · ${interview.title}`,
       date: interview.scheduledAt,
       type: "interview" as const,
     })),
@@ -39,7 +42,7 @@ export default async function CalendarPage() {
   ];
 
   return (
-    <PageShell title="Calendar" description="Deadlines, interviews, reminders, and tasks in one view">
+    <PageShell title="Calendar" description="Deadlines, interviews, reminders, and tasks for the selected application mode">
       <CalendarView events={events} />
     </PageShell>
   );
